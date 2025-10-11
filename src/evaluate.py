@@ -5,7 +5,7 @@ Follows PEP8 conventions with type hints.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -72,7 +72,7 @@ def evaluate_model(
 
     if log_results:
         logger.info(f"Test set size: {len(y_test)} samples")
-        logger.info(f"\nTest Set Performance:")
+        logger.info("\nTest Set Performance:")
         logger.info(f"  R² Score:  {r2:.4f}")
         logger.info(f"  MSE:       {mse:.4f}")
         logger.info(f"  RMSE:      {rmse:.4f}")
@@ -173,6 +173,6 @@ def compare_with_baseline(metrics: Dict[str, float]) -> None:
         improvement = metrics["r2_score"] - baseline_r2
         logger.info(f"  ✓ Improvement: +{improvement:.4f} R²")
     else:
-        logger.warning(f"  ✗ Model performs worse than baseline!")
+        logger.warning("  ✗ Model performs worse than baseline!")
 
     logger.info("=" * 70)

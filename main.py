@@ -17,15 +17,19 @@ import logging
 import sys
 from pathlib import Path
 
-# Add project root to path
+# Add project root to path (required before imports)
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
-import config
-from data.load_data import load_and_split_data
-from src.preprocessing import create_preprocessing_pipeline
-from src.train import train_model_with_grid_search, save_model, get_cv_results
-from src.evaluate import (
+import config  # noqa: E402
+from data.load_data import load_and_split_data  # noqa: E402
+from src.preprocessing import create_preprocessing_pipeline  # noqa: E402
+from src.train import (  # noqa: E402
+    train_model_with_grid_search,
+    save_model,
+    get_cv_results,
+)
+from src.evaluate import (  # noqa: E402
     evaluate_model,
     print_prediction_summary,
     compare_with_baseline,
@@ -89,7 +93,7 @@ def main() -> None:
         logger.info("\n" + "=" * 70)
         logger.info("PIPELINE COMPLETED SUCCESSFULLY!")
         logger.info("=" * 70)
-        logger.info(f"\nFinal Model Performance:")
+        logger.info("\nFinal Model Performance:")
         logger.info(f"  R² Score: {metrics['r2_score']:.4f}")
         logger.info(f"  RMSE:     {metrics['rmse']:.4f}")
         logger.info(f"\nModel saved to: {config.MODEL_PATH}")

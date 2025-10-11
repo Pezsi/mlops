@@ -111,7 +111,7 @@ def save_model(model: GridSearchCV, filepath: Path = config.MODEL_PATH) -> None:
     try:
         joblib.dump(model, filepath)
         file_size_kb = filepath.stat().st_size / 1024
-        logger.info(f"Model saved successfully!")
+        logger.info("Model saved successfully!")
         logger.info(f"File size: {file_size_kb:.2f} KB")
         logger.info("=" * 70)
     except Exception as e:
