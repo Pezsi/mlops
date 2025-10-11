@@ -6,9 +6,11 @@ Follows PEP8 conventions with type hints.
 
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import joblib
+import mlflow
+import mlflow.sklearn
 import pandas as pd
 from sklearn.model_selection import GridSearchCV
 from sklearn.pipeline import Pipeline
@@ -177,3 +179,55 @@ def get_cv_results(model: GridSearchCV) -> pd.DataFrame:
             "mean_fit_time",
         ]
     ].sort_values("rank_test_score")
+
+
+def log_model_to_mlflow(
+    model: GridSearchCV,
+    metrics: Dict[str, float],
+    params: Optional[Dict[str, Any]] = None,
+) -> None:
+    """Log trained model and metrics to MLflow.
+
+    Args:
+        model: Trained GridSearchCV model to log.
+        metrics: Dictionary of evaluation metrics.
+        params: Additional parameters to log. If None, logs best params from model.
+
+    Example:
+        >>> metrics = {"r2_score": 0.47, "mse": 0.34}
+        >>> log_model_to_mlflow(trained_model, metrics)
+    """
+    logger.info("=" * 70)
+    logger.info("Logging to MLflow")
+    logger.info("=" * 70)
+
+    # Log best hyperparameters
+    if params is None:
+        params = model.best_params_
+
+    logger.info("Logging hyperparameters...")
+    for param_name, param_value in params.items():
+        mlflow.log_param(param_name, param_value)
+        logger.info(f"  {param_name}: {param_value}")
+
+    # Log cross-validation score
+    mlflow.log_param("cv_folds", config.CV_FOLDS)
+    mlflow.log_metric("cv_score", model.best_score_)
+
+    # Log evaluation metrics
+    logger.info("\nLogging metrics...")
+    for metric_name, metric_value in metrics.items():
+        if isinstance(metric_value, (int, float)):
+            mlflow.log_metric(metric_name, metric_value)
+            logger.info(f"  {metric_name}: {metric_value:.4f}")
+
+    # Log model artifact
+    logger.info("\nLogging model artifact...")
+    mlflow.sklearn.log_model(
+        model,
+        artifact_path="model",
+        registered_model_name="wine_quality_rf_model",
+    )
+    logger.info("Model logged successfully!")
+
+    logger.info("=" * 70)
