@@ -20,8 +20,8 @@ import joblib
 
 # 2. Load red wine data
 print("Loading wine quality dataset...")
-dataset_url = 'https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv'
-data = pd.read_csv(dataset_url, sep=';')
+dataset_url = "https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
+data = pd.read_csv(dataset_url, sep=";")
 
 # Check the data
 print(f"\nDataset shape: {data.shape}")
@@ -32,40 +32,37 @@ print(f"\nDataset info:")
 print(data.describe())
 
 # 3. Split data into training and test sets
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Splitting data into train/test sets...")
 y = data.quality
-X = data.drop('quality', axis=1)
+X = data.drop("quality", axis=1)
 
 X_train, X_test, y_train, y_test = train_test_split(
-    X, y,
-    test_size=0.2,
-    random_state=123,
-    stratify=y
+    X, y, test_size=0.2, random_state=123, stratify=y
 )
 
 print(f"Training set size: {X_train.shape[0]} samples")
 print(f"Test set size: {X_test.shape[0]} samples")
 
 # 4. Declare data preprocessing steps in a pipeline
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Creating preprocessing + model pipeline...")
 
 pipeline = make_pipeline(
     preprocessing.StandardScaler(),
-    RandomForestRegressor(n_estimators=100, random_state=123)
+    RandomForestRegressor(n_estimators=100, random_state=123),
 )
 
 print("Pipeline created:")
 print(pipeline)
 
 # 5. Declare hyperparameters to tune
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Setting up hyperparameter grid...")
 
 hyperparameters = {
-    'randomforestregressor__max_features': ['auto', 'sqrt', 'log2'],
-    'randomforestregressor__max_depth': [None, 5, 3, 1]
+    "randomforestregressor__max_features": ["auto", "sqrt", "log2"],
+    "randomforestregressor__max_depth": [None, 5, 3, 1],
 }
 
 print(f"Hyperparameters to tune: {hyperparameters}")
@@ -73,13 +70,13 @@ print(f"Total combinations: {3 * 4} = 12 combinations")
 print(f"With 10-fold CV: {12 * 10} = 120 model fits")
 
 # 6. Tune model using cross-validation pipeline
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Starting GridSearchCV (this may take 1-2 minutes)...")
 
 clf = GridSearchCV(pipeline, hyperparameters, cv=10, verbose=1, n_jobs=-1)
 clf.fit(X_train, y_train)
 
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("GridSearchCV completed!")
 print(f"\nBest parameters found:")
 for param, value in clf.best_params_.items():
@@ -88,12 +85,12 @@ for param, value in clf.best_params_.items():
 print(f"\nBest cross-validation score: {clf.best_score_:.4f}")
 
 # 7. Refit is automatic (refit=True by default)
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Model automatically refitted on entire training set")
 print(f"Refit status: {clf.refit}")
 
 # 8. Evaluate model pipeline on test data
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Evaluating model on test set...")
 
 y_pred = clf.predict(X_test)
@@ -107,17 +104,17 @@ print(f"  MSE: {mse:.4f}")
 print(f"  RMSE: {np.sqrt(mse):.4f}")
 
 # 9. Save model for future use
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Saving trained model...")
 
-model_filename = 'rf_regressor.pkl'
+model_filename = "rf_regressor.pkl"
 joblib.dump(clf, model_filename)
 
 print(f"Model saved as '{model_filename}'")
 print(f"File size: {os.path.getsize(model_filename) / 1024:.2f} KB")
 
 # 10. Test loading the model
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Testing model loading...")
 
 clf_loaded = joblib.load(model_filename)
@@ -128,7 +125,7 @@ assert np.allclose(y_pred, y_pred_loaded), "Loaded model predictions don't match
 print("✓ Model loaded successfully and predictions match!")
 
 # 11. Example prediction
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Example prediction on a single wine sample:")
 
 # Take the first sample from test set
@@ -144,7 +141,7 @@ print(f"\nActual quality: {actual_quality}")
 print(f"Predicted quality: {predicted_quality:.2f}")
 print(f"Prediction error: {abs(actual_quality - predicted_quality):.2f}")
 
-print("\n" + "="*50)
+print("\n" + "=" * 50)
 print("Tutorial completed successfully! 🍷")
 print("\nNext steps for MLOps:")
 print("1. Refactor code into modular structure (data/, src/, tests/)")
