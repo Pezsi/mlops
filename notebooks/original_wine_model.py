@@ -25,10 +25,10 @@ data = pd.read_csv(dataset_url, sep=";")
 
 # Check the data
 print(f"\nDataset shape: {data.shape}")
-print(f"\nFirst 5 rows:")
+print("\nFirst 5 rows:")
 print(data.head())
 
-print(f"\nDataset info:")
+print("\nDataset info:")
 print(data.describe())
 
 # 3. Split data into training and test sets
@@ -78,7 +78,7 @@ clf.fit(X_train, y_train)
 
 print("\n" + "=" * 50)
 print("GridSearchCV completed!")
-print(f"\nBest parameters found:")
+print("\nBest parameters found:")
 for param, value in clf.best_params_.items():
     print(f"  {param}: {value}")
 
@@ -98,7 +98,7 @@ y_pred = clf.predict(X_test)
 r2 = r2_score(y_test, y_pred)
 mse = mean_squared_error(y_test, y_pred)
 
-print(f"\nTest Set Performance:")
+print("\nTest Set Performance:")
 print(f"  R² Score: {r2:.4f}")
 print(f"  MSE: {mse:.4f}")
 print(f"  RMSE: {np.sqrt(mse):.4f}")
@@ -133,7 +133,7 @@ sample = X_test.iloc[0:1]
 actual_quality = y_test.iloc[0]
 predicted_quality = clf_loaded.predict(sample)[0]
 
-print(f"\nWine features:")
+print("\nWine features:")
 for feature, value in sample.iloc[0].items():
     print(f"  {feature}: {value:.3f}")
 
