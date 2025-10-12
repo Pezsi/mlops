@@ -9,13 +9,11 @@ env/
 ENV/
 
 # Models and data
-*.pkl
 *.joblib
 *.h5
 *.pth
 
 # MLflow
-mlruns/
 mlartifacts/
 
 # Jupyter
@@ -25,6 +23,7 @@ mlartifacts/
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 

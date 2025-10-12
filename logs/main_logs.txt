@@ -1,0 +1,215 @@
+venv) balint@balint-ROG-Strix-G513IE-G513IE:~/Documents/wine_quality_mlops$ python main.py
+2025-10-12 19:41:44,487 - __main__ - INFO -
+======================================================================
+2025-10-12 19:41:44,487 - __main__ - INFO - WINE QUALITY ML PIPELINE - PRODUCTION VERSION WITH MLFLOW
+2025-10-12 19:41:44,487 - __main__ - INFO - ======================================================================
+2025-10-12 19:41:44,487 - __main__ - INFO - Pipeline mode: COMPARE
+2025-10-12 19:41:44,487 - __main__ - INFO - ======================================================================
+
+2025-10-12 19:41:44,487 - __main__ - INFO - STEP 1: Loading and splitting data
+2025-10-12 19:41:44,487 - data.load_data - INFO - ======================================================================
+2025-10-12 19:41:44,487 - data.load_data - INFO - Starting data loading and splitting pipeline
+2025-10-12 19:41:44,488 - data.load_data - INFO - ======================================================================
+2025-10-12 19:41:44,488 - data.load_data - INFO - Loading Wine Quality dataset from https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv
+2025-10-12 19:41:45,920 - data.load_data - INFO - Dataset loaded successfully: 1599 samples, 12 features
+2025-10-12 19:41:45,920 - data.load_data - INFO - Features: ['fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar', 'chlorides', 'free sulfur dioxide', 'total sulfur dioxide', 'density', 'pH', 'sulphates', 'alcohol', 'quality']
+2025-10-12 19:41:45,921 - data.load_data - INFO - Splitting data into train/test sets...
+2025-10-12 19:41:45,927 - data.load_data - INFO - Training set: 1279 samples
+2025-10-12 19:41:45,927 - data.load_data - INFO - Test set: 320 samples
+2025-10-12 19:41:45,927 - data.load_data - INFO - Test set proportion: 20.0%
+2025-10-12 19:41:45,927 - data.load_data - INFO - Data loading and splitting completed successfully
+2025-10-12 19:41:45,928 - data.load_data - INFO - ======================================================================
+2025-10-12 19:41:45,928 - __main__ - INFO -
+STEP 2: Creating both pipelines for comparison
+2025-10-12 19:41:45,928 - src.preprocessing - INFO - Creating preprocessing + model pipeline
+2025-10-12 19:41:45,928 - src.preprocessing - INFO - Model parameters: {'n_estimators': 100, 'random_state': 123}
+2025-10-12 19:41:45,930 - src.preprocessing - INFO - Pipeline created: Pipeline(steps=[('standardscaler', StandardScaler()),
+                ('randomforestregressor',
+                 RandomForestRegressor(random_state=123))])
+2025-10-12 19:41:45,930 - src.preprocessing - INFO - Pipeline steps:
+2025-10-12 19:41:45,930 - src.preprocessing - INFO -   1. standardscaler: StandardScaler
+2025-10-12 19:41:45,930 - src.preprocessing - INFO -   2. randomforestregressor: RandomForestRegressor
+2025-10-12 19:41:45,930 - src.preprocessing - INFO - Creating alternative preprocessing + model pipeline (GradientBoosting)
+2025-10-12 19:41:45,930 - src.preprocessing - INFO - Model parameters: {'n_estimators': 100, 'learning_rate': 0.1, 'max_depth': 3, 'random_state': 123}
+2025-10-12 19:41:45,930 - src.preprocessing - INFO - PCA components: 8
+2025-10-12 19:41:45,932 - src.preprocessing - INFO - Pipeline created: Pipeline(steps=[('standardscaler', StandardScaler()),
+                ('pca', PCA(n_components=8)),
+                ('gradientboostingregressor',
+                 GradientBoostingRegressor(random_state=123))])
+2025-10-12 19:41:45,933 - src.preprocessing - INFO - Pipeline steps:
+2025-10-12 19:41:45,933 - src.preprocessing - INFO -   1. standardscaler: StandardScaler
+2025-10-12 19:41:45,933 - src.preprocessing - INFO -   2. pca: PCA
+2025-10-12 19:41:45,933 - src.preprocessing - INFO -   3. gradientboostingregressor: GradientBoostingRegressor
+2025-10-12 19:41:45,933 - __main__ - INFO -
+STEP 3: Comparing pipelines...
+2025-10-12 19:41:45,933 - src.train - INFO - ======================================================================
+2025-10-12 19:41:45,933 - src.train - INFO - COMPARING PIPELINES: RandomForest vs GradientBoosting
+2025-10-12 19:41:45,933 - src.train - INFO - ======================================================================
+2025-10-12 19:41:45,933 - src.train - INFO -
+### PIPELINE 1: RandomForest ###
+2025-10-12 19:41:45,976 - src.train - INFO - Training RandomForest pipeline...
+2025-10-12 19:41:45,976 - src.train - INFO - ======================================================================
+2025-10-12 19:41:45,976 - src.train - INFO - Starting model training with GridSearchCV
+2025-10-12 19:41:45,976 - src.train - INFO - ======================================================================
+2025-10-12 19:41:45,976 - src.train - INFO - Training samples: 1279
+2025-10-12 19:41:45,976 - src.train - INFO - Features: 11
+2025-10-12 19:41:45,976 - src.train - INFO - Cross-validation folds: 10
+2025-10-12 19:41:45,976 - src.train - INFO - Hyperparameter grid: {'randomforestregressor__max_features': ['sqrt', 'log2'], 'randomforestregressor__max_depth': [None, 5, 3, 1]}
+2025-10-12 19:41:45,976 - src.train - INFO - Total hyperparameter combinations: 8
+2025-10-12 19:41:45,976 - src.train - INFO - Total model fits: 80
+2025-10-12 19:41:45,976 - src.train - INFO - Starting hyperparameter search...
+Fitting 10 folds for each of 8 candidates, totalling 80 fits
+2025-10-12 19:41:49,668 - src.train - INFO - GridSearchCV completed!
+2025-10-12 19:41:49,668 - src.train - INFO - ======================================================================
+2025-10-12 19:41:49,668 - src.train - INFO - Best hyperparameters found:
+2025-10-12 19:41:49,668 - src.train - INFO -   randomforestregressor__max_depth: None
+2025-10-12 19:41:49,668 - src.train - INFO -   randomforestregressor__max_features: sqrt
+2025-10-12 19:41:49,668 - src.train - INFO -
+Best cross-validation score: 0.4770
+2025-10-12 19:41:49,668 - src.train - INFO - Model automatically refit on full training set: True
+2025-10-12 19:41:49,668 - src.train - INFO -
+Evaluating RandomForest on test set...
+2025-10-12 19:41:49,668 - src.evaluate - INFO - ======================================================================
+2025-10-12 19:41:49,668 - src.evaluate - INFO - Evaluating model on test set
+2025-10-12 19:41:49,668 - src.evaluate - INFO - ======================================================================
+2025-10-12 19:41:49,676 - src.evaluate - INFO - Test set size: 320 samples
+2025-10-12 19:41:49,676 - src.evaluate - INFO -
+Test Set Performance:
+2025-10-12 19:41:49,676 - src.evaluate - INFO -   R² Score:  0.4713
+2025-10-12 19:41:49,676 - src.evaluate - INFO -   MSE:       0.3412
+2025-10-12 19:41:49,677 - src.evaluate - INFO -   RMSE:      0.5841
+2025-10-12 19:41:49,677 - src.evaluate - INFO -   MAE:       0.4198
+2025-10-12 19:41:49,677 - src.evaluate - INFO - ======================================================================
+2025-10-12 19:41:49,677 - src.train - INFO -
+Logging RandomForest to MLflow...
+2025-10-12 19:41:49,677 - src.train - INFO - ======================================================================
+2025-10-12 19:41:49,677 - src.train - INFO - Logging to MLflow
+2025-10-12 19:41:49,677 - src.train - INFO - ======================================================================
+2025-10-12 19:41:49,677 - src.train - INFO - Logging hyperparameters...
+2025-10-12 19:41:49,679 - src.train - INFO -   randomforestregressor__max_depth: None
+2025-10-12 19:41:49,680 - src.train - INFO -   randomforestregressor__max_features: sqrt
+2025-10-12 19:41:49,684 - src.train - INFO -
+Logging metrics...
+2025-10-12 19:41:49,686 - src.train - INFO -   r2_score: 0.4713
+2025-10-12 19:41:49,689 - src.train - INFO -   mse: 0.3412
+2025-10-12 19:41:49,692 - src.train - INFO -   rmse: 0.5841
+2025-10-12 19:41:49,696 - src.train - INFO -   mae: 0.4198
+2025-10-12 19:41:49,699 - src.train - INFO -   test_samples: 320.0000
+2025-10-12 19:41:49,699 - src.train - INFO -
+Logging model artifact and registering to Models Registry...
+2025/10/12 19:41:49 WARNING mlflow.models.model: `artifact_path` is deprecated. Please use `name` instead.
+2025/10/12 19:41:51 WARNING mlflow.models.model: Model logged without a signature and input example. Please set `input_example` parameter when logging the model to auto infer the model signature.
+Registered model 'wine_quality_rf_model' already exists. Creating a new version of this model...
+Created version '3' of model 'wine_quality_rf_model'.
+2025-10-12 19:41:51,926 - src.train - INFO -   ✓ Model logged to run artifacts
+2025-10-12 19:41:51,926 - src.train - INFO -   ✓ Model registered to Models Registry
+2025-10-12 19:41:51,927 - src.train - INFO - ======================================================================
+2025-10-12 19:41:51,927 - src.train - INFO - RandomForest pipeline completed!
+2025-10-12 19:41:51,928 - src.train - INFO -
+### PIPELINE 2: GradientBoosting ###
+2025-10-12 19:41:51,934 - src.train - INFO - Training GradientBoosting pipeline...
+2025-10-12 19:41:51,934 - src.train - INFO - ======================================================================
+2025-10-12 19:41:51,934 - src.train - INFO - Starting model training with GridSearchCV
+2025-10-12 19:41:51,934 - src.train - INFO - ======================================================================
+2025-10-12 19:41:51,934 - src.train - INFO - Training samples: 1279
+2025-10-12 19:41:51,934 - src.train - INFO - Features: 11
+2025-10-12 19:41:51,934 - src.train - INFO - Cross-validation folds: 10
+2025-10-12 19:41:51,934 - src.train - INFO - Hyperparameter grid: {'gradientboostingregressor__n_estimators': [50, 100, 150], 'gradientboostingregressor__learning_rate': [0.05, 0.1, 0.15], 'gradientboostingregressor__max_depth': [3, 5, 7], 'pca__n_components': [5, 8, 10]}
+2025-10-12 19:41:51,934 - src.train - INFO - Total hyperparameter combinations: 81
+2025-10-12 19:41:51,934 - src.train - INFO - Total model fits: 810
+2025-10-12 19:41:51,934 - src.train - INFO - Starting hyperparameter search...
+Fitting 10 folds for each of 81 candidates, totalling 810 fits
+2025-10-12 19:42:31,041 - src.train - INFO - GridSearchCV completed!
+2025-10-12 19:42:31,041 - src.train - INFO - ======================================================================
+2025-10-12 19:42:31,041 - src.train - INFO - Best hyperparameters found:
+2025-10-12 19:42:31,041 - src.train - INFO -   gradientboostingregressor__learning_rate: 0.05
+2025-10-12 19:42:31,042 - src.train - INFO -   gradientboostingregressor__max_depth: 7
+2025-10-12 19:42:31,042 - src.train - INFO -   gradientboostingregressor__n_estimators: 150
+2025-10-12 19:42:31,042 - src.train - INFO -   pca__n_components: 10
+2025-10-12 19:42:31,042 - src.train - INFO -
+Best cross-validation score: 0.4290
+2025-10-12 19:42:31,042 - src.train - INFO - Model automatically refit on full training set: True
+2025-10-12 19:42:31,042 - src.train - INFO -
+Evaluating GradientBoosting on test set...
+2025-10-12 19:42:31,042 - src.evaluate - INFO - ======================================================================
+2025-10-12 19:42:31,042 - src.evaluate - INFO - Evaluating model on test set
+2025-10-12 19:42:31,042 - src.evaluate - INFO - ======================================================================
+2025-10-12 19:42:31,046 - src.evaluate - INFO - Test set size: 320 samples
+2025-10-12 19:42:31,046 - src.evaluate - INFO -
+Test Set Performance:
+2025-10-12 19:42:31,046 - src.evaluate - INFO -   R² Score:  0.4026
+2025-10-12 19:42:31,046 - src.evaluate - INFO -   MSE:       0.3855
+2025-10-12 19:42:31,046 - src.evaluate - INFO -   RMSE:      0.6209
+2025-10-12 19:42:31,046 - src.evaluate - INFO -   MAE:       0.4283
+2025-10-12 19:42:31,046 - src.evaluate - INFO - ======================================================================
+2025-10-12 19:42:31,046 - src.train - INFO -
+Logging GradientBoosting to MLflow...
+2025-10-12 19:42:31,046 - src.train - INFO - ======================================================================
+2025-10-12 19:42:31,046 - src.train - INFO - Logging to MLflow
+2025-10-12 19:42:31,046 - src.train - INFO - ======================================================================
+2025-10-12 19:42:31,046 - src.train - INFO - Logging hyperparameters...
+2025-10-12 19:42:31,047 - src.train - INFO -   gradientboostingregressor__learning_rate: 0.05
+2025-10-12 19:42:31,048 - src.train - INFO -   gradientboostingregressor__max_depth: 7
+2025-10-12 19:42:31,049 - src.train - INFO -   gradientboostingregressor__n_estimators: 150
+2025-10-12 19:42:31,051 - src.train - INFO -   pca__n_components: 10
+2025-10-12 19:42:31,055 - src.train - INFO -
+Logging metrics...
+2025-10-12 19:42:31,058 - src.train - INFO -   r2_score: 0.4026
+2025-10-12 19:42:31,061 - src.train - INFO -   mse: 0.3855
+2025-10-12 19:42:31,065 - src.train - INFO -   rmse: 0.6209
+2025-10-12 19:42:31,069 - src.train - INFO -   mae: 0.4283
+2025-10-12 19:42:31,072 - src.train - INFO -   test_samples: 320.0000
+2025-10-12 19:42:31,072 - src.train - INFO -
+Logging model artifact and registering to Models Registry...
+2025/10/12 19:42:31 WARNING mlflow.models.model: `artifact_path` is deprecated. Please use `name` instead.
+2025/10/12 19:42:33 WARNING mlflow.models.model: Model logged without a signature and input example. Please set `input_example` parameter when logging the model to auto infer the model signature.
+Registered model 'wine_quality_rf_model' already exists. Creating a new version of this model...
+Created version '4' of model 'wine_quality_rf_model'.
+2025-10-12 19:42:33,063 - src.train - INFO -   ✓ Model logged to run artifacts
+2025-10-12 19:42:33,064 - src.train - INFO -   ✓ Model registered to Models Registry
+2025-10-12 19:42:33,064 - src.train - INFO - ======================================================================
+2025-10-12 19:42:33,064 - src.train - INFO - GradientBoosting pipeline completed!
+2025-10-12 19:42:33,065 - src.train - INFO -
+======================================================================
+2025-10-12 19:42:33,065 - src.train - INFO - COMPARISON SUMMARY
+2025-10-12 19:42:33,065 - src.train - INFO - ======================================================================
+2025-10-12 19:42:33,065 - src.train - INFO -
+RandomForest Results:
+2025-10-12 19:42:33,065 - src.train - INFO -   Best CV Score: 0.4770
+2025-10-12 19:42:33,065 - src.train - INFO -   Test R² Score: 0.4713
+2025-10-12 19:42:33,065 - src.train - INFO -   Test RMSE:     0.5841
+2025-10-12 19:42:33,065 - src.train - INFO -
+GradientBoosting Results:
+2025-10-12 19:42:33,065 - src.train - INFO -   Best CV Score: 0.4290
+2025-10-12 19:42:33,065 - src.train - INFO -   Test R² Score: 0.4026
+2025-10-12 19:42:33,065 - src.train - INFO -   Test RMSE:     0.6209
+2025-10-12 19:42:33,065 - src.train - INFO -
+*** WINNER: RandomForest ***
+2025-10-12 19:42:33,065 - src.train - INFO - ======================================================================
+2025-10-12 19:42:33,065 - __main__ - INFO -
+STEP 4: Saving trained models
+2025-10-12 19:42:33,065 - src.train - INFO - ======================================================================
+2025-10-12 19:42:33,065 - src.train - INFO - Saving trained model to: /home/balint/Documents/wine_quality_mlops/models/rf_regressor.pkl
+2025-10-12 19:42:33,093 - src.train - INFO - Model saved successfully!
+2025-10-12 19:42:33,093 - src.train - INFO - File size: 4191.26 KB
+2025-10-12 19:42:33,093 - src.train - INFO - ======================================================================
+2025-10-12 19:42:33,093 - src.train - INFO - ======================================================================
+2025-10-12 19:42:33,093 - src.train - INFO - Saving trained model to: /home/balint/Documents/wine_quality_mlops/models/gb_regressor.pkl
+2025-10-12 19:42:33,105 - src.train - INFO - Model saved successfully!
+2025-10-12 19:42:33,105 - src.train - INFO - File size: 1668.77 KB
+2025-10-12 19:42:33,105 - src.train - INFO - ======================================================================
+2025-10-12 19:42:33,105 - __main__ - INFO -
+======================================================================
+2025-10-12 19:42:33,105 - __main__ - INFO - PIPELINE COMPARISON COMPLETED SUCCESSFULLY!
+2025-10-12 19:42:33,105 - __main__ - INFO - ======================================================================
+2025-10-12 19:42:33,105 - __main__ - INFO -
+Models saved to:
+2025-10-12 19:42:33,105 - __main__ - INFO -   RandomForest:      /home/balint/Documents/wine_quality_mlops/models/rf_regressor.pkl
+2025-10-12 19:42:33,105 - __main__ - INFO -   GradientBoosting:  /home/balint/Documents/wine_quality_mlops/models/gb_regressor.pkl
+2025-10-12 19:42:33,105 - __main__ - INFO -
+Logs saved to:  /home/balint/Documents/wine_quality_mlops/logs/training.log
+2025-10-12 19:42:33,105 - __main__ - INFO - MLflow UI:      mlflow ui --port 5000
+2025-10-12 19:42:33,105 - __main__ - INFO -
+======================================================================
+
+(venv) balint@balint-ROG-Strix-G513IE-G513IE:~/Documents/wine_quality_mlops$ mlflow ui --port 5000
