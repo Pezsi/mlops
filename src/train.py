@@ -221,13 +221,14 @@ def log_model_to_mlflow(
             mlflow.log_metric(metric_name, metric_value)
             logger.info(f"  {metric_name}: {metric_value:.4f}")
 
-    # Log model artifact
-    logger.info("\nLogging model artifact...")
+    # Log model artifact and register to Models Registry
+    logger.info("\nLogging model artifact and registering to Models Registry...")
     mlflow.sklearn.log_model(
         model,
         artifact_path="model",
         registered_model_name="wine_quality_rf_model",
     )
-    logger.info("Model logged successfully!")
+    logger.info("  ✓ Model logged to run artifacts")
+    logger.info("  ✓ Model registered to Models Registry")
 
     logger.info("=" * 70)
