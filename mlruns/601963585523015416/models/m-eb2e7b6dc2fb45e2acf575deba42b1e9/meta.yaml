@@ -1,0 +1,10 @@
+artifact_location: /home/balint/Documents/wine_quality_mlops/mlruns/601963585523015416/models/m-eb2e7b6dc2fb45e2acf575deba42b1e9/artifacts
+creation_timestamp: 1760279947133
+experiment_id: '601963585523015416'
+last_updated_timestamp: 1760279949474
+model_id: m-eb2e7b6dc2fb45e2acf575deba42b1e9
+model_type: null
+name: model
+source_run_id: 516b166cab5f4c798ac58056f8c3591b
+status: 2
+status_message: null

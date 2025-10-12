@@ -1,0 +1,14 @@
+artifact_uri: /home/balint/Documents/wine_quality_mlops/mlruns/601963585523015416/516b166cab5f4c798ac58056f8c3591b/artifacts
+end_time: 1760279949513
+entry_point_name: ''
+experiment_id: '601963585523015416'
+lifecycle_stage: active
+run_id: 516b166cab5f4c798ac58056f8c3591b
+run_name: GradientBoosting_Pipeline
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1760279903115
+status: 3
+tags: []
+user_id: balint

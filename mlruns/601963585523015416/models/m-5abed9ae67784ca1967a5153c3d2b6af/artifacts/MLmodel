@@ -1,0 +1,22 @@
+artifact_path: /home/balint/Documents/wine_quality_mlops/mlruns/601963585523015416/models/m-5abed9ae67784ca1967a5153c3d2b6af/artifacts
+flavors:
+  python_function:
+    env:
+      conda: conda.yaml
+      virtualenv: python_env.yaml
+    loader_module: mlflow.sklearn
+    model_path: model.pkl
+    predict_fn: predict
+    python_version: 3.12.3
+  sklearn:
+    code: null
+    pickled_model: model.pkl
+    serialization_format: cloudpickle
+    sklearn_version: 1.7.2
+mlflow_version: 3.4.0
+model_id: m-5abed9ae67784ca1967a5153c3d2b6af
+model_size_bytes: 1710804
+model_uuid: m-5abed9ae67784ca1967a5153c3d2b6af
+prompts: null
+run_id: 2cd96f4b2f914a1bbb09da98bdf3ffaa
+utc_time_created: '2025-10-12 14:37:56.155913'
