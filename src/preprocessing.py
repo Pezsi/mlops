@@ -8,7 +8,8 @@ import logging
 from typing import Any
 
 from sklearn import preprocessing
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.decomposition import PCA
+from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from sklearn.pipeline import Pipeline, make_pipeline
 
 import config
@@ -48,6 +49,56 @@ def create_preprocessing_pipeline(
     # Create pipeline with StandardScaler and RandomForest
     pipeline = make_pipeline(
         preprocessing.StandardScaler(), RandomForestRegressor(**model_params)
+    )
+
+    logger.info(f"Pipeline created: {pipeline}")
+    logger.info("Pipeline steps:")
+    for i, (name, transformer) in enumerate(pipeline.steps, 1):
+        logger.info(f"  {i}. {name}: {transformer.__class__.__name__}")
+
+    return pipeline
+
+
+def create_alternative_pipeline(
+    model_params: dict[str, Any] = None,
+    pca_components: int = 8,
+) -> Pipeline:
+    """Create alternative preprocessing and model pipeline.
+
+    Uses PCA and GradientBoosting.
+
+    Creates a scikit-learn pipeline that includes:
+    1. StandardScaler for feature normalization
+    2. PCA for dimensionality reduction
+    3. GradientBoostingRegressor model
+
+    Args:
+        model_params: Dictionary of model hyperparameters.
+            If None, uses default parameters from config.
+        pca_components: Number of PCA components to keep (default: 8).
+
+    Returns:
+        sklearn Pipeline with StandardScaler, PCA, and GradientBoostingRegressor.
+
+    Example:
+        >>> pipeline = create_alternative_pipeline()
+        >>> pipeline.fit(X_train, y_train)
+        >>> predictions = pipeline.predict(X_test)
+    """
+    if model_params is None:
+        model_params = config.GB_MODEL_PARAMS
+
+    logger.info(
+        "Creating alternative preprocessing + model pipeline (GradientBoosting)"
+    )
+    logger.info(f"Model parameters: {model_params}")
+    logger.info(f"PCA components: {pca_components}")
+
+    # Create pipeline with StandardScaler, PCA, and GradientBoosting
+    pipeline = make_pipeline(
+        preprocessing.StandardScaler(),
+        PCA(n_components=pca_components),
+        GradientBoostingRegressor(**model_params),
     )
 
     logger.info(f"Pipeline created: {pipeline}")

@@ -181,6 +181,111 @@ def get_cv_results(model: GridSearchCV) -> pd.DataFrame:
     ].sort_values("rank_test_score")
 
 
+def compare_pipelines(
+    pipeline_rf: Pipeline,
+    pipeline_gb: Pipeline,
+    X_train: pd.DataFrame,
+    y_train: pd.Series,
+    X_test: pd.DataFrame,
+    y_test: pd.Series,
+    param_grid_rf: Dict[str, Any] = None,
+    param_grid_gb: Dict[str, Any] = None,
+) -> Dict[str, GridSearchCV]:
+    """Compare RandomForest and GradientBoosting pipelines.
+
+    Each pipeline is logged in a separate MLflow run.
+
+    Args:
+        pipeline_rf: RandomForest pipeline with preprocessing.
+        pipeline_gb: GradientBoosting pipeline with preprocessing.
+        X_train: Training features.
+        y_train: Training target.
+        X_test: Test features.
+        y_test: Test target.
+        param_grid_rf: Hyperparameter grid for RandomForest.
+        param_grid_gb: Hyperparameter grid for GradientBoosting.
+
+    Returns:
+        Dictionary with trained models: {"rf": GridSearchCV, "gb": GridSearchCV}.
+
+    Example:
+        >>> results = compare_pipelines(
+        ...     pipe_rf, pipe_gb, X_train, y_train, X_test, y_test
+        ... )
+        >>> best = (
+        ...     results["rf"]
+        ...     if results["rf"].best_score_ > results["gb"].best_score_
+        ...     else results["gb"]
+        ... )
+    """
+    from src.evaluate import evaluate_model
+
+    if param_grid_rf is None:
+        param_grid_rf = config.HYPERPARAM_GRID
+    if param_grid_gb is None:
+        param_grid_gb = config.GB_HYPERPARAM_GRID
+
+    results = {}
+
+    logger.info("=" * 70)
+    logger.info("COMPARING PIPELINES: RandomForest vs GradientBoosting")
+    logger.info("=" * 70)
+
+    # Train and log RandomForest pipeline
+    logger.info("\n### PIPELINE 1: RandomForest ###")
+    with mlflow.start_run(run_name="RandomForest_Pipeline"):
+        logger.info("Training RandomForest pipeline...")
+        trained_rf = train_model_with_grid_search(
+            pipeline_rf, X_train, y_train, param_grid_rf
+        )
+        logger.info("\nEvaluating RandomForest on test set...")
+        metrics_rf = evaluate_model(trained_rf, X_test, y_test)
+        logger.info("\nLogging RandomForest to MLflow...")
+        log_model_to_mlflow(trained_rf, metrics_rf)
+        results["rf"] = trained_rf
+        logger.info("RandomForest pipeline completed!")
+
+    # Train and log GradientBoosting pipeline
+    logger.info("\n### PIPELINE 2: GradientBoosting ###")
+    with mlflow.start_run(run_name="GradientBoosting_Pipeline"):
+        logger.info("Training GradientBoosting pipeline...")
+        trained_gb = train_model_with_grid_search(
+            pipeline_gb, X_train, y_train, param_grid_gb
+        )
+        logger.info("\nEvaluating GradientBoosting on test set...")
+        metrics_gb = evaluate_model(trained_gb, X_test, y_test)
+        logger.info("\nLogging GradientBoosting to MLflow...")
+        log_model_to_mlflow(trained_gb, metrics_gb)
+        results["gb"] = trained_gb
+        logger.info("GradientBoosting pipeline completed!")
+
+    # Compare results
+    logger.info("\n" + "=" * 70)
+    logger.info("COMPARISON SUMMARY")
+    logger.info("=" * 70)
+    logger.info("\nRandomForest Results:")
+    logger.info(f"  Best CV Score: {trained_rf.best_score_:.4f}")
+    logger.info(f"  Test R² Score: {metrics_rf['r2_score']:.4f}")
+    logger.info(f"  Test RMSE:     {metrics_rf['rmse']:.4f}")
+
+    logger.info("\nGradientBoosting Results:")
+    logger.info(f"  Best CV Score: {trained_gb.best_score_:.4f}")
+    logger.info(f"  Test R² Score: {metrics_gb['r2_score']:.4f}")
+    logger.info(f"  Test RMSE:     {metrics_gb['rmse']:.4f}")
+
+    # Determine winner
+    if metrics_rf["r2_score"] > metrics_gb["r2_score"]:
+        logger.info("\n*** WINNER: RandomForest ***")
+    elif metrics_gb["r2_score"] > metrics_rf["r2_score"]:
+        logger.info("\n*** WINNER: GradientBoosting ***")
+    else:
+        logger.info("\n*** TIE: Both models have equal performance ***")
+
+    logger.info("=" * 70)
+
+    return results
+
+
 def log_model_to_mlflow(
     model: GridSearchCV,
     metrics: Dict[str, float],

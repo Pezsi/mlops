@@ -34,10 +34,26 @@ MODEL_PARAMS: Dict[str, Any] = {
     "random_state": RANDOM_STATE,
 }
 
-# GridSearchCV hyperparameter grid
+# GridSearchCV hyperparameter grid - RandomForest
 HYPERPARAM_GRID: Dict[str, List[Any]] = {
     "randomforestregressor__max_features": ["sqrt", "log2"],
     "randomforestregressor__max_depth": [None, 5, 3, 1],
+}
+
+# Model hyperparameters - GradientBoosting
+GB_MODEL_PARAMS: Dict[str, Any] = {
+    "n_estimators": 100,
+    "learning_rate": 0.1,
+    "max_depth": 3,
+    "random_state": RANDOM_STATE,
+}
+
+# GridSearchCV hyperparameter grid - GradientBoosting
+GB_HYPERPARAM_GRID: Dict[str, List[Any]] = {
+    "gradientboostingregressor__n_estimators": [50, 100, 150],
+    "gradientboostingregressor__learning_rate": [0.05, 0.1, 0.15],
+    "gradientboostingregressor__max_depth": [3, 5, 7],
+    "pca__n_components": [5, 8, 10],
 }
 
 # Cross-validation settings
@@ -45,9 +61,13 @@ CV_FOLDS: int = 10
 CV_N_JOBS: int = -1  # Use all available cores
 CV_VERBOSE: int = 1
 
-# Model saving
+# Model saving - RandomForest
 MODEL_FILENAME: str = "rf_regressor.pkl"
 MODEL_PATH: Path = MODELS_DIR / MODEL_FILENAME
+
+# Model saving - GradientBoosting
+GB_MODEL_FILENAME: str = "gb_regressor.pkl"
+GB_MODEL_PATH: Path = MODELS_DIR / GB_MODEL_FILENAME
 
 # Feature columns (11 wine quality features)
 FEATURE_COLUMNS: List[str] = [
