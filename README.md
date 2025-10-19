@@ -11,11 +11,17 @@ Full ML pipeline for predicting wine quality using Random Forest and Gradient Bo
 - **Two ML Models** - Random Forest & Gradient Boosting
 - **MLflow Integration** - Experiment tracking, model registry
 - **Two REST APIs** - FastAPI (async) & Flask-RESTX
+- **Docker Containerization** - Multi-container orchestration with Docker Compose
+- **Apache Airflow** - Automated training pipelines and model deployment
+- **Streamlit Dashboard** - Real-time monitoring and visualization
+- **Evidently Integration** - Data drift and model drift detection
 - **91+ Tests** - Unit, integration, and API tests
 - **PEP8 Compliant** - 0 linting errors
-- **Docker Ready** - Production deployment
+- **Production Ready** - Full MLSecOps infrastructure
 
 ## Quick Start
+
+### Local Development
 
 ```bash
 # Install dependencies
@@ -33,6 +39,27 @@ mlflow ui --port 5000
 # Run tests
 pytest tests/ -v
 ```
+
+### Docker Deployment (Recommended)
+
+```bash
+# Start complete MLOps platform
+docker-compose up -d
+
+# Access services:
+# - Airflow UI: http://localhost:8081 (admin/admin)
+# - MLflow UI: http://localhost:5000
+# - FastAPI: http://localhost:8000/docs
+# - Monitoring: http://localhost:8501
+
+# View logs
+docker-compose logs -f
+
+# Stop all services
+docker-compose down
+```
+
+For detailed deployment instructions, see [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)
 
 ## Project Structure
 
@@ -60,9 +87,24 @@ wine_quality_mlops/
 │   ├── test_fastapi.py        # 15+ tests
 │   └── test_flask_app.py      # 15+ tests
 │
+├── airflow/                   # Airflow orchestration
+│   ├── dags/                  # DAG definitions
+│   │   └── train_wine_quality_dag.py  # Automated training pipeline
+│   ├── logs/                  # Airflow logs
+│   └── Dockerfile.airflow     # Airflow container
+│
+├── monitoring/                # Monitoring dashboard
+│   └── app.py                 # Streamlit monitoring app
+│
 ├── models/                    # Trained models
 ├── mlruns/                    # MLflow experiments
-└── logs/                      # Training logs
+├── logs/                      # Training logs
+│
+├── Dockerfile                 # Main application container
+├── Dockerfile.streamlit       # Monitoring container
+├── docker-compose.yml         # Multi-service orchestration
+├── environment.yml            # Conda environment
+└── DOCKER_DEPLOYMENT.md       # Deployment guide
 ```
 
 ## ML Pipeline
@@ -356,11 +398,21 @@ mypy . --exclude=venv
 - scikit-learn, pandas, numpy
 
 **MLOps:**
-- MLflow - Tracking & registry
+- MLflow - Experiment tracking & model registry
+- Apache Airflow - Workflow orchestration
+- Evidently - Data & model drift detection
 
 **APIs:**
-- FastAPI - Async REST
-- Flask-RESTX - Traditional REST
+- FastAPI - Async REST API
+- Flask-RESTX - Traditional REST API
+
+**Containerization:**
+- Docker - Application containerization
+- Docker Compose - Multi-service orchestration
+
+**Monitoring:**
+- Streamlit - Interactive dashboards
+- Plotly - Data visualization
 
 **Testing:**
 - pytest, httpx
@@ -368,12 +420,78 @@ mypy . --exclude=venv
 **Quality:**
 - black, flake8
 
+**Databases:**
+- PostgreSQL - Airflow metadata
+- Redis - Airflow message broker
+
+## Airflow Automation
+
+### Automated Training Pipeline
+
+The `train_wine_quality_model` DAG automates:
+
+1. **Daily Training** - Runs at 2 AM daily
+2. **Model Comparison** - Compares new model with production
+3. **Auto Deployment** - Promotes better models to production
+4. **Notifications** - Sends email if model doesn't improve
+
+**Enable in Airflow:**
+```bash
+# Access Airflow UI
+http://localhost:8081
+
+# Login: admin / admin
+# Toggle DAG switch to ON
+```
+
+### DAG Configuration
+
+```python
+# Schedule: Daily at 2 AM
+schedule_interval='0 2 * * *'
+
+# Automatic model versioning
+# Automatic staging/production promotion
+# Email notifications on failures
+```
+
+## Monitoring Dashboard
+
+### Real-time Monitoring with Streamlit
+
+Access at http://localhost:8501
+
+**Pages:**
+
+1. **Overview**
+   - System metrics
+   - Recent training runs
+   - Performance trends
+
+2. **Model Performance**
+   - R² Score trends
+   - RMSE analysis
+   - Metrics comparison
+
+3. **Data Drift**
+   - Evidently drift detection
+   - Feature distribution analysis
+   - HTML drift reports
+
+4. **Model Registry**
+   - Production models
+   - Model versions
+   - Performance metrics
+
 ## Documentation
 
 - **Main README:** This file
+- **Docker Guide:** [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)
 - **API Docs:** `API_README.md` (detailed API reference)
 - **Swagger UI:** http://localhost:8000/docs
 - **MLflow UI:** http://localhost:5000
+- **Airflow UI:** http://localhost:8081
+- **Monitoring:** http://localhost:8501
 
 ## Troubleshooting
 
@@ -409,11 +527,46 @@ MIT License
 
 ## Status
 
-**Production Ready**
-- Version: 1.0.0
+**Production Ready - Full MLSecOps Platform**
+- Version: 2.0.0
 - Last Updated: January 2025
 - Status: Stable
 
+### Recent Updates (v2.0.0)
+
+- Docker multi-container orchestration
+- Apache Airflow automated training pipelines
+- Streamlit monitoring dashboard
+- Evidently data/model drift detection
+- Complete MLSecOps infrastructure
+- Production-ready deployment
+
 ---
+
+## Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   Wine Quality MLOps Platform                │
+├─────────────────────────────────────────────────────────────┤
+│                                                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │   Airflow    │  │  MLflow UI   │  │  Streamlit   │      │
+│  │   (8081)     │  │   (5000)     │  │   (8501)     │      │
+│  │              │  │              │  │              │      │
+│  │ - Scheduling │  │ - Tracking   │  │ - Dashboard  │      │
+│  │ - Pipelines  │  │ - Registry   │  │ - Monitoring │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│                                                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │  FastAPI     │  │  PostgreSQL  │  │    Redis     │      │
+│  │   (8000)     │  │              │  │              │      │
+│  │              │  │              │  │              │      │
+│  │ - Predictions│  │ - Metadata   │  │ - Queue      │      │
+│  │ - REST API   │  │              │  │              │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│                                                               │
+└─────────────────────────────────────────────────────────────┘
+```
 
 For detailed API documentation, see [API_README.md](API_README.md)

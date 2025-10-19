@@ -1,0 +1,156 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for Airflow
+  postgres:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+    networks:
+      - mlops-network
+
+  # Redis for Airflow Celery
+  redis:
+    image: redis:latest
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 30s
+      retries: 50
+    networks:
+      - mlops-network
+
+  # Airflow webserver
+  airflow-webserver:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile.airflow
+    command: webserver
+    ports:
+      - "8081:8080"
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
+      AIRFLOW__WEBSERVER__SECRET_KEY: 'secret_key_for_webserver'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+      - ./models:/opt/airflow/models
+      - ./mlruns:/opt/airflow/mlruns
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mlops-network
+
+  # Airflow scheduler
+  airflow-scheduler:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile.airflow
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: ''
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/logs:/opt/airflow/logs
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data
+      - ./models:/opt/airflow/models
+      - ./mlruns:/opt/airflow/mlruns
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mlops-network
+
+  # Airflow init (DB initialization)
+  airflow-init:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile.airflow
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        airflow db init
+        airflow users create \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password admin
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: ''
+    volumes:
+      - ./airflow/logs:/opt/airflow/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - mlops-network
+
+  # MLflow + API service
+  mlflow-api:
+    build: .
+    ports:
+      - "5000:5000"  # MLflow UI
+      - "8000:8000"  # FastAPI
+    volumes:
+      - ./mlruns:/app/mlruns
+      - ./models:/app/models
+      - ./data:/app/data
+    environment:
+      MLFLOW_TRACKING_URI: file:/app/mlruns
+      PYTHONPATH: /app
+    networks:
+      - mlops-network
+
+  # Streamlit monitoring dashboard
+  streamlit-monitoring:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./monitoring:/app/monitoring
+      - ./mlruns:/app/mlruns
+      - ./data:/app/data
+      - ./models:/app/models
+    environment:
+      MLFLOW_TRACKING_URI: http://mlflow-api:5000
+    depends_on:
+      - mlflow-api
+    networks:
+      - mlops-network
+
+volumes:
+  postgres-db-volume:
+
+networks:
+  mlops-network:
+    driver: bridge
