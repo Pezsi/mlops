@@ -1,6 +1,0 @@
-artifact_location: /home/balint/Documents/wine_quality_mlops/mlruns/601963585523015416
-creation_time: 1760277648209
-experiment_id: '601963585523015416'
-last_update_time: 1760277648209
-lifecycle_stage: active
-name: wine_quality_experiment

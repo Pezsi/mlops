@@ -8,13 +8,17 @@ venv/
 env/
 ENV/
 
-# Models and data
+# Models and data (large binary files)
 *.joblib
 *.h5
 *.pth
+*.pkl
+models/*.pkl
+mlruns/*/artifacts/*.pkl
 
-# MLflow
+# MLflow runs (ignore entire directory - regenerated locally)
 mlartifacts/
+mlruns/
 
 # Jupyter
 .ipynb_checkpoints
@@ -38,3 +42,10 @@ htmlcov/
 
 # Logs
 *.log
+logs/*.log
+logs/*.txt
+airflow/logs/
+
+# Monitoring reports
+monitoring/*.html
+monitoring/drift_report.html

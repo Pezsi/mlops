@@ -1,0 +1,66 @@
+# Multi-stage build for optimized production image
+# Stage 1: Builder
+FROM python:3.11-slim as builder
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Create virtual environment and install dependencies
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Production
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install runtime dependencies only
+RUN apt-get update && apt-get install -y \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy virtual environment from builder
+COPY --from=builder /opt/venv /opt/venv
+
+# Set environment to use venv
+ENV PATH="/opt/venv/bin:$PATH"
+ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV MLFLOW_TRACKING_URI="file:/app/mlruns"
+
+# Create necessary directories
+RUN mkdir -p /app/mlruns /app/models /app/data /app/logs && \
+    chmod -R 777 /app/mlruns /app/models /app/logs
+
+# Copy application files (order by change frequency - least to most)
+COPY config.py /app/
+COPY src/ /app/src/
+COPY main.py /app/
+COPY fastapi_app.py /app/
+COPY flask_app.py /app/
+
+# Copy data (use .dockerignore to exclude large files)
+COPY data/ /app/data/
+
+# Expose ports
+EXPOSE 5000 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl --fail http://localhost:8000/docs || exit 1
+
+# Use non-root user for security
+RUN useradd -m -u 1000 mlops && chown -R mlops:mlops /app
+USER mlops
+
+# Start services
+CMD ["/bin/bash", "-c", "mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri file:/app/mlruns --default-artifact-root /app/mlruns & python fastapi_app.py"]
