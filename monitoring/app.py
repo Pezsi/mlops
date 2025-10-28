@@ -37,7 +37,10 @@ st.set_page_config(
 )
 
 # MLflow configuration
-MLFLOW_TRACKING_URI = "file:../mlruns"
+import os
+# Get absolute path to mlruns directory
+MLRUNS_PATH = Path(__file__).parent.parent / "mlruns"
+MLFLOW_TRACKING_URI = f"file://{MLRUNS_PATH.absolute()}"
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 client = MlflowClient()
 
