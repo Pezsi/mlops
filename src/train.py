@@ -308,7 +308,10 @@ def log_model_to_mlflow(
 
     # Log best hyperparameters
     if params is None:
-        params = model.best_params_
+        if hasattr(model, 'best_params_'):
+            params = model.best_params_
+        else:
+            params = {}
 
     logger.info("Logging hyperparameters...")
     for param_name, param_value in params.items():
@@ -317,7 +320,8 @@ def log_model_to_mlflow(
 
     # Log cross-validation score
     mlflow.log_param("cv_folds", config.CV_FOLDS)
-    mlflow.log_metric("cv_score", model.best_score_)
+    if hasattr(model, 'best_score_'):
+        mlflow.log_metric("cv_score", model.best_score_)
 
     # Log evaluation metrics
     logger.info("\nLogging metrics...")

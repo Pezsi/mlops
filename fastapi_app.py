@@ -408,6 +408,10 @@ async def predict_batch(request: BatchPredictionRequest):
         # Get model
         model = get_model(request.model_name)
 
+        # Validate non-empty list
+        if not request.features_list:
+            raise HTTPException(status_code=422, detail="features_list cannot be empty")
+
         # Convert all features to DataFrame
         data_list = []
         for features in request.features_list:
