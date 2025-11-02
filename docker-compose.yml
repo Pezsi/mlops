@@ -17,6 +17,25 @@ services:
     networks:
       - mlops-network
 
+  # PostgreSQL database for MLOps Metadata
+  mlops-metadata-db:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: mlops_user
+      POSTGRES_PASSWORD: mlops_password
+      POSTGRES_DB: mlops_metadata
+    volumes:
+      - mlops-metadata-volume:/var/lib/postgresql/data
+      - ./airflow/db/metadata_schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "5433:5432"  # Expose on different port to avoid conflict
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "mlops_user"]
+      interval: 5s
+      retries: 5
+    networks:
+      - mlops-network
+
   # Redis for Airflow Celery
   redis:
     image: redis:latest
@@ -46,15 +65,26 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session'
       AIRFLOW__WEBSERVER__SECRET_KEY: 'secret_key_for_webserver'
+      # MLOps Metadata DB
+      METADATA_DB_CONN: postgresql://mlops_user:mlops_password@mlops-metadata-db:5432/mlops_metadata
+      # Notification settings (configure these with your actual credentials)
+      SMTP_USER: ${SMTP_USER:-your-email@gmail.com}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-your-app-password}
+      TO_EMAILS: ${TO_EMAILS:-admin@example.com}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/utils:/opt/airflow/utils
       - ./data:/opt/airflow/data
       - ./models:/opt/airflow/models
       - ./mlruns:/opt/airflow/mlruns
+      - ./src:/opt/airflow/src
     depends_on:
       postgres:
+        condition: service_healthy
+      mlops-metadata-db:
         condition: service_healthy
     networks:
       - mlops-network
@@ -71,15 +101,26 @@ services:
       AIRFLOW__CORE__FERNET_KEY: ''
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      # MLOps Metadata DB
+      METADATA_DB_CONN: postgresql://mlops_user:mlops_password@mlops-metadata-db:5432/mlops_metadata
+      # Notification settings
+      SMTP_USER: ${SMTP_USER:-your-email@gmail.com}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-your-app-password}
+      TO_EMAILS: ${TO_EMAILS:-admin@example.com}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/utils:/opt/airflow/utils
       - ./data:/opt/airflow/data
       - ./models:/opt/airflow/models
       - ./mlruns:/opt/airflow/mlruns
+      - ./src:/opt/airflow/src
     depends_on:
       postgres:
+        condition: service_healthy
+      mlops-metadata-db:
         condition: service_healthy
     networks:
       - mlops-network
@@ -148,8 +189,30 @@ services:
     networks:
       - mlops-network
 
+  # Webhook Trigger API
+  webhook-api:
+    build:
+      context: .
+      dockerfile: airflow/Dockerfile.webhook-api
+    ports:
+      - "8080:8080"
+    environment:
+      AIRFLOW_API_URL: http://airflow-webserver:8080/api/v1
+      AIRFLOW_USERNAME: admin
+      AIRFLOW_PASSWORD: admin
+      WEBHOOK_API_KEY: ${WEBHOOK_API_KEY:-mlops-secret-key-2025}
+      FLASK_DEBUG: "false"
+    volumes:
+      - ./airflow/api:/app/api
+      - ./airflow/utils:/app/utils
+    depends_on:
+      - airflow-webserver
+    networks:
+      - mlops-network
+
 volumes:
   postgres-db-volume:
+  mlops-metadata-volume:
 
 networks:
   mlops-network:

@@ -1,0 +1,31 @@
+# Dockerfile for Webhook Trigger API
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY airflow/requirements-webhook-api.txt /app/requirements.txt
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+# Copy API code
+COPY airflow/api /app/api
+COPY airflow/utils /app/utils
+
+# Set Python path
+ENV PYTHONPATH="/app"
+
+# Expose port
+EXPOSE 8080
+
+# Run the API
+CMD ["python", "/app/api/webhook_trigger_api.py"]
