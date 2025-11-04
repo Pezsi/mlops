@@ -25,7 +25,7 @@ import numpy as np
 sys.path.insert(0, '/opt/airflow')
 
 # MLflow configuration
-MLFLOW_TRACKING_URI = "file:/opt/airflow/mlruns"
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://mlflow-api:5000")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 client = MlflowClient()
 
@@ -59,7 +59,7 @@ def train_new_model(**kwargs):
     X_train, X_test, y_train, y_test = load_and_split_data()
 
     # Create preprocessing pipeline
-    preprocessing_pipeline = create_preprocessing_pipeline(use_pca=False)
+    preprocessing_pipeline = create_preprocessing_pipeline()
 
     # Start MLflow run
     with mlflow.start_run(run_name=f"airflow_training_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
@@ -69,7 +69,7 @@ def train_new_model(**kwargs):
             preprocessing_pipeline,
             X_train,
             y_train,
-            cv_folds=5
+            cv=5
         )
 
         # Evaluate model

@@ -56,7 +56,7 @@ services:
       dockerfile: airflow/Dockerfile.airflow
     command: webserver
     ports:
-      - "8081:8080"
+      - "8082:8080"
     environment:
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
@@ -67,6 +67,8 @@ services:
       AIRFLOW__WEBSERVER__SECRET_KEY: 'secret_key_for_webserver'
       # MLOps Metadata DB
       METADATA_DB_CONN: postgresql://mlops_user:mlops_password@mlops-metadata-db:5432/mlops_metadata
+      # MLflow tracking
+      MLFLOW_TRACKING_URI: http://mlflow-api:5000
       # Notification settings (configure these with your actual credentials)
       SMTP_USER: ${SMTP_USER:-your-email@gmail.com}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-your-app-password}
@@ -103,6 +105,8 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       # MLOps Metadata DB
       METADATA_DB_CONN: postgresql://mlops_user:mlops_password@mlops-metadata-db:5432/mlops_metadata
+      # MLflow tracking
+      MLFLOW_TRACKING_URI: http://mlflow-api:5000
       # Notification settings
       SMTP_USER: ${SMTP_USER:-your-email@gmail.com}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-your-app-password}
@@ -158,7 +162,7 @@ services:
   mlflow-api:
     build: .
     ports:
-      - "5000:5000"  # MLflow UI
+      - "5001:5000"  # MLflow UI
       - "8000:8000"  # FastAPI
     volumes:
       - ./mlruns:/app/mlruns
@@ -167,6 +171,7 @@ services:
     environment:
       MLFLOW_TRACKING_URI: file:/app/mlruns
       PYTHONPATH: /app
+      GUNICORN_CMD_ARGS: "--timeout 120 --workers 4 --bind 0.0.0.0:5000"
     networks:
       - mlops-network
 

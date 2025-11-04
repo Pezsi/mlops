@@ -19,6 +19,7 @@ COPY config.py /app/
 COPY main.py /app/
 COPY fastapi_app.py /app/
 COPY flask_app.py /app/
+COPY gunicorn_config.py /app/
 
 # Copy source directories
 COPY data/ /app/data/
@@ -40,4 +41,4 @@ RUN chmod -R 777 /app/mlruns /app/logs
 EXPOSE 5000 8000 8080
 
 # Start MLflow server and FastAPI application
-CMD ["/bin/bash", "-c", "source activate wine_quality_mlops && mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri file:/app/mlruns --default-artifact-root /app/mlruns & python fastapi_app.py"]
+CMD ["/bin/bash", "-c", "source activate wine_quality_mlops && mlflow server --host 0.0.0.0 --port 5000 --backend-store-uri file:/app/mlruns --default-artifact-root file:/app/mlruns --allowed-hosts '*' & python fastapi_app.py"]
