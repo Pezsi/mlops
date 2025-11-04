@@ -1,15 +1,56 @@
-# Wine Quality Prediction REST APIs
+# Wine Quality MLOps - Teljes API Dokumentáció
 
-Complete API documentation for wine quality prediction endpoints.
+Komplett API dokumentáció a Wine Quality MLOps projekt összes REST API szolgáltatásához.
 
-## Overview
+## Áttekintés
 
-Two production-ready REST API implementations:
+A projekt **3 különböző REST API szolgáltatást** tartalmaz, amelyek együtt alkotják a teljes MLOps ökoszisztémát:
 
-- **FastAPI** (547 lines) - Modern async framework with Pydantic validation
-- **Flask-RESTX** (637 lines) - Traditional REST with Swagger UI
+### 1. Prediction APIs (Model Serving)
+- **FastAPI** (547 lines) - Modern async framework, Pydantic validáció, high performance
+- **Flask-RESTX** (637 lines) - Traditional REST, Swagger UI, mature ecosystem
 
-Both provide identical functionality: predictions, training, model management, and MLflow integration.
+**Funkciók:**
+- Wine quality predictions (single & batch)
+- Model training trigger
+- Model management és metrics
+- Health checks és monitoring
+- MLflow integration
+
+**Portok:** 8000 (FastAPI), 8000 (Flask - egyikét választva)
+
+### 2. Webhook Trigger API (Airflow Orchestration)
+- **Flask-based REST API** - Airflow DAG triggering
+- **Port:** 8080
+
+**Funkciók:**
+- DAG trigger external rendszerekből (CI/CD, webhooks, stb.)
+- Training trigger custom paraméterekkel
+- Evaluation trigger
+- DAG status check
+- API key authentication
+
+### 3. MLflow Tracking Server API
+- **MLflow beépített REST API**
+- **Port:** 5000
+
+**Funkciók:**
+- Experiment tracking
+- Model registry operations
+- Metrics és artifacts logging
+- Model versioning
+
+## API Összehasonlítás
+
+| Feature | FastAPI | Flask-RESTX | Webhook API | MLflow API |
+|---------|---------|-------------|-------------|------------|
+| **Port** | 8000 | 8000 | 8080 | 5000 |
+| **Purpose** | Predictions | Predictions | DAG Trigger | Tracking |
+| **Performance** | Excellent | Very Good | Good | Good |
+| **Async** | Yes | No | No | No |
+| **Auth** | None (dev) | None (dev) | API Key | None (dev) |
+| **Swagger UI** | /docs | /docs/ | /docs | Built-in |
+| **Best For** | New projects | Legacy | Orchestration | ML Tracking |
 
 ## Quick Start
 
@@ -370,16 +411,418 @@ Current implementation (development only):
 - Add CORS configuration
 - Environment-based config
 
-## Documentation Links
+---
 
-- **Swagger UI:** http://localhost:8000/docs (FastAPI) or http://localhost:8000/docs/ (Flask)
-- **MLflow UI:** http://localhost:5000
-- **Main README:** [README.md](README.md)
-- **FastAPI Docs:** https://fastapi.tiangolo.com/
-- **Flask-RESTX Docs:** https://flask-restx.readthedocs.io/
+## 2. Webhook Trigger API Részletes Dokumentáció
+
+### Áttekintés
+
+A Webhook Trigger API egy Flask-based REST service, amely lehetővé teszi Airflow DAG-ok külső rendszerekből történő triggerelését.
+
+**Base URL:** `http://localhost:8080`
+
+**Authentication:** API Key (Header: `X-API-Key`)
+
+**Default API Key:** `mlops-secret-key-2025` (változtatható .env fájlban)
+
+### Endpoints
+
+#### 1. Health Check
+```http
+GET /health
+```
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-01-15T10:30:00Z",
+  "airflow_connection": "ok"
+}
+```
+
+#### 2. Trigger Training DAG
+```http
+POST /trigger/training
+Content-Type: application/json
+X-API-Key: mlops-secret-key-2025
+```
+
+**Request Body:**
+```json
+{
+  "model_name": "wine_quality_rf_model",
+  "trigger_source": "ci_cd_pipeline",
+  "dataset_version": "v2.1.0",
+  "hyperparameters": {
+    "n_estimators": 200,
+    "max_depth": 10,
+    "min_samples_split": 2
+  },
+  "force_training": true,
+  "deployment_target": "staging",
+  "callback_url": "https://your-system.com/callback"
+}
+```
+
+**Request Parameters:**
+- `model_name` (string, required) - Model neve
+- `trigger_source` (string, required) - Trigger forrás (ci_cd, manual, scheduled, stb.)
+- `dataset_version` (string, optional) - Dataset verzió
+- `hyperparameters` (object, optional) - Custom hyperparaméterek
+- `force_training` (boolean, optional) - Training kényszerítése (default: false)
+- `deployment_target` (string, optional) - Target environment (staging/production)
+- `callback_url` (string, optional) - Callback URL eredményekhez
+
+**Response:**
+```json
+{
+  "status": "triggered",
+  "dag_id": "webhook_triggered_training",
+  "run_id": "manual__2025-01-15T10:30:00+00:00",
+  "execution_date": "2025-01-15T10:30:00+00:00",
+  "message": "DAG triggered successfully",
+  "config": {
+    "model_name": "wine_quality_rf_model",
+    "trigger_source": "ci_cd_pipeline"
+  }
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST http://localhost:8080/trigger/training \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: mlops-secret-key-2025" \
+  -d '{
+    "model_name": "wine_quality_rf_model",
+    "trigger_source": "ci_cd",
+    "force_training": true,
+    "hyperparameters": {
+      "n_estimators": 200,
+      "max_depth": 10
+    }
+  }'
+```
+
+#### 3. Trigger Evaluation DAG
+```http
+POST /trigger/evaluation
+Content-Type: application/json
+X-API-Key: mlops-secret-key-2025
+```
+
+**Request Body:**
+```json
+{
+  "model_run_id": "run_20250115_103000",
+  "evaluation_dataset": "holdout_v1",
+  "comparison_baseline": "production_model_v1"
+}
+```
+
+**Response:**
+```json
+{
+  "status": "triggered",
+  "dag_id": "model_evaluation_pipeline",
+  "run_id": "manual__2025-01-15T10:31:00+00:00"
+}
+```
+
+#### 4. Trigger Dataset Check
+```http
+POST /trigger/dataset-check
+Content-Type: application/json
+X-API-Key: mlops-secret-key-2025
+```
+
+**Request Body:**
+```json
+{
+  "dataset_path": "/opt/airflow/data/incoming/new_data.csv",
+  "reference_dataset": "production_v1",
+  "drift_threshold": 0.2
+}
+```
+
+#### 5. Check DAG Status
+```http
+GET /status/<dag_id>/<run_id>
+X-API-Key: mlops-secret-key-2025
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/status/webhook_triggered_training/manual__2025-01-15T10:30:00+00:00 \
+  -H "X-API-Key: mlops-secret-key-2025"
+```
+
+**Response:**
+```json
+{
+  "dag_id": "webhook_triggered_training",
+  "run_id": "manual__2025-01-15T10:30:00+00:00",
+  "state": "success",
+  "start_date": "2025-01-15T10:30:00+00:00",
+  "end_date": "2025-01-15T10:45:00+00:00",
+  "execution_date": "2025-01-15T10:30:00+00:00"
+}
+```
+
+**States:**
+- `queued` - Várakozik végrehajtásra
+- `running` - Futás alatt
+- `success` - Sikeresen befejeződött
+- `failed` - Hiba történt
+- `skipped` - Kihagyva
+
+#### 6. List Available DAGs
+```http
+GET /dags
+X-API-Key: mlops-secret-key-2025
+```
+
+**Response:**
+```json
+{
+  "dags": [
+    {
+      "dag_id": "daily_model_training_with_notification",
+      "is_paused": false,
+      "description": "Daily scheduled training with notifications"
+    },
+    {
+      "dag_id": "webhook_triggered_training",
+      "is_paused": false,
+      "description": "Webhook-triggered training with custom config"
+    }
+  ],
+  "count": 5
+}
+```
+
+#### 7. API Documentation
+```http
+GET /docs
+```
+
+Swagger UI interaktív API dokumentáció.
+
+### Error Responses
+
+#### 401 Unauthorized
+```json
+{
+  "error": "Unauthorized",
+  "message": "Invalid or missing API key"
+}
+```
+
+#### 400 Bad Request
+```json
+{
+  "error": "Bad Request",
+  "message": "Missing required field: model_name"
+}
+```
+
+#### 500 Internal Server Error
+```json
+{
+  "error": "Internal Server Error",
+  "message": "Failed to trigger DAG: connection error"
+}
+```
+
+### Authentication
+
+**API Key Setup:**
+
+1. Állítsd be az API kulcsot a `.env` fájlban:
+```bash
+WEBHOOK_API_KEY=your-secret-key-here
+```
+
+2. Használd a kulcsot minden kérésben:
+```bash
+curl -H "X-API-Key: your-secret-key-here" ...
+```
+
+### Use Cases
+
+#### 1. CI/CD Integration
+```yaml
+# GitHub Actions example
+- name: Trigger model training
+  run: |
+    curl -X POST http://mlops-server:8080/trigger/training \
+      -H "Content-Type: application/json" \
+      -H "X-API-Key: ${{ secrets.MLOPS_API_KEY }}" \
+      -d '{"model_name": "wine_quality_rf_model", "trigger_source": "github_actions"}'
+```
+
+#### 2. Scheduled External Trigger
+```python
+import requests
+import schedule
+
+def trigger_training():
+    response = requests.post(
+        "http://localhost:8080/trigger/training",
+        headers={
+            "Content-Type": "application/json",
+            "X-API-Key": "mlops-secret-key-2025"
+        },
+        json={
+            "model_name": "wine_quality_rf_model",
+            "trigger_source": "scheduled_script"
+        }
+    )
+    print(f"Status: {response.status_code}, Response: {response.json()}")
+
+schedule.every().day.at("02:00").do(trigger_training)
+```
+
+#### 3. Event-Driven Training
+```python
+# Webhook endpoint a saját alkalmazásodban
+@app.route('/new-data-webhook', methods=['POST'])
+def handle_new_data():
+    data = request.json
+
+    # Trigger training amikor új adat érkezik
+    response = requests.post(
+        "http://mlops-server:8080/trigger/training",
+        headers={"X-API-Key": "mlops-secret-key-2025"},
+        json={
+            "model_name": "wine_quality_rf_model",
+            "trigger_source": "new_data_event",
+            "dataset_version": data.get("version"),
+            "force_training": True
+        }
+    )
+
+    return jsonify({"training_triggered": response.json()})
+```
 
 ---
 
-**Version:** 1.0.0
+## 3. MLflow API Referencia
+
+### Base URL
+```
+http://localhost:5000
+```
+
+### Gyakori Endpoints
+
+#### Create Experiment
+```http
+POST /api/2.0/mlflow/experiments/create
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "name": "wine_quality_experiment",
+  "artifact_location": "mlruns"
+}
+```
+
+#### Log Metrics
+```http
+POST /api/2.0/mlflow/runs/log-metric
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "run_id": "abc123",
+  "key": "r2_score",
+  "value": 0.87,
+  "timestamp": 1642252800000
+}
+```
+
+#### Search Runs
+```http
+POST /api/2.0/mlflow/runs/search
+Content-Type: application/json
+```
+
+**Body:**
+```json
+{
+  "experiment_ids": ["1"],
+  "filter": "metrics.r2_score > 0.8",
+  "order_by": ["metrics.r2_score DESC"],
+  "max_results": 10
+}
+```
+
+### Python SDK
+```python
+import mlflow
+
+# Set tracking URI
+mlflow.set_tracking_uri("http://localhost:5000")
+
+# Start run
+with mlflow.start_run():
+    mlflow.log_param("n_estimators", 100)
+    mlflow.log_metric("r2_score", 0.87)
+    mlflow.sklearn.log_model(model, "model")
+```
+
+---
+
+## API Integration Diagram
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    External Systems                          │
+│  (CI/CD, Monitoring, Data Pipelines, User Apps)            │
+└────────────┬──────────────┬──────────────┬─────────────────┘
+             │              │              │
+             ▼              ▼              ▼
+     ┌───────────┐  ┌──────────┐  ┌──────────────┐
+     │ Webhook   │  │ FastAPI/ │  │   MLflow     │
+     │    API    │  │  Flask   │  │     API      │
+     │  (8080)   │  │  (8000)  │  │   (5000)     │
+     └─────┬─────┘  └─────┬────┘  └──────┬───────┘
+           │              │               │
+           ▼              │               ▼
+     ┌─────────┐          │         ┌──────────┐
+     │ Airflow │          │         │  MLflow  │
+     │   DAGs  │          │         │ Tracking │
+     └─────┬───┘          │         └─────┬────┘
+           │              │               │
+           ▼              ▼               ▼
+     ┌─────────────────────────────────────┐
+     │        Models + Data + Metrics       │
+     │     (Shared Volumes & Databases)     │
+     └─────────────────────────────────────┘
+```
+
+## Documentation Links
+
+- **FastAPI Swagger:** http://localhost:8000/docs
+- **Flask-RESTX Swagger:** http://localhost:8000/docs/
+- **Webhook API Swagger:** http://localhost:8080/docs
+- **MLflow UI:** http://localhost:5000
+- **Airflow UI:** http://localhost:8081
+- **Main README:** [README.md](README.md)
+- **FastAPI Docs:** https://fastapi.tiangolo.com/
+- **Flask-RESTX Docs:** https://flask-restx.readthedocs.io/
+- **MLflow Docs:** https://mlflow.org/docs/latest/rest-api.html
+- **Airflow API Docs:** https://airflow.apache.org/docs/apache-airflow/stable/stable-rest-api-ref.html
+
+---
+
+**Version:** 2.0.0
 **Status:** Production Ready
-**Last Updated:** January 2025
+**Last Updated:** November 2025
+**Services:** 3 REST APIs (Prediction, Webhook, MLflow)

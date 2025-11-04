@@ -426,33 +426,187 @@ mypy . --exclude=venv
 
 ## Airflow Automation
 
-### Automated Training Pipeline
+### Airflow MLOps Platform
 
-The `train_wine_quality_model` DAG automates:
+A teljes projekt egy production-ready MLOps rendszer Apache Airflow orchestrációval. Az alábbi szolgáltatásokat tartalmazza:
 
-1. **Daily Training** - Runs at 2 AM daily
-2. **Model Comparison** - Compares new model with production
-3. **Auto Deployment** - Promotes better models to production
-4. **Notifications** - Sends email if model doesn't improve
+**Szolgáltatások:**
+- **Airflow Webserver/Scheduler** (8081) - DAG kezelés és ütemezés
+- **MLOps Metadata DB** (PostgreSQL:5433) - Dedikált metadata tracking
+- **MLflow** (5000) - Model tracking és registry
+- **Webhook API** (8080) - External triggers REST API-val
+- **Streamlit Dashboard** (8501) - Real-time monitoring
+- **Redis** - Airflow message broker
+- **PostgreSQL** - Airflow metadata
 
-**Enable in Airflow:**
+### DAG-ok Áttekintése
+
+A projekt **5 különböző DAG**-ot tartalmaz különböző trigger típusokkal:
+
+#### 1. `daily_model_training_with_notification`
+**Trigger:** Schedule-based (napi 2:00 AM)
+
+**Funkciók:**
+- Automatikus model training MLflow logging-gal
+- Metadata tracking PostgreSQL adatbázisba
+- Intelligent model comparison (R² és RMSE alapján)
+- Multi-stage deployment (Staging → Production)
+- Multi-channel notifications (Email, Slack, Database)
+- Comprehensive error handling és retry logic
+
+**Workflow:**
+```
+Train Model → Compare with Production → Better?
+   ↓ Yes                                    ↓ No
+Deploy to Staging                  Send Warning Notification
+   ↓
+Deploy to Production
+   ↓
+Send Success Notification
+```
+
+**Callbacks:**
+- `on_success_callback` - Task sikeres befejezésekor
+- `on_failure_callback` - Task hiba esetén (Email + Slack + DB)
+- `on_retry_callback` - Retry kísérletkor (Slack + DB)
+
+#### 2. `dataset_sensor_event_trigger`
+**Trigger:** Event-based (FileSensor)
+
+**Funkciók:**
+- Automatikusan detektálja új dataset fájlokat (`/opt/airflow/data/incoming`)
+- Dataset validáció (schema, quality checks)
+- **Data drift detection:**
+  - Kolmogorov-Smirnov test numerikus feature-ökre
+  - Population Stability Index (PSI) számítás
+  - Threshold: PSI > 0.2 → drift detected
+- Conditional model retraining trigger drift esetén
+- Processed fájl mozgatás
+
+#### 3. `model_deployment_pipeline`
+**Trigger:** Schedule + ExternalTaskSensor (napi 4:00 AM)
+
+**Funkciók:**
+- Vár a training DAG befejezésére (`ExternalTaskSensor`)
+- Comprehensive model evaluation
+- A/B test setup
+- Multi-stage deployment
+- Deployment report generation
+- Stakeholder notifications
+
+#### 4. `data_pipeline_orchestrator`
+**Trigger:** Schedule-based (napi 1:00 AM)
+
+**Funkciók:**
+- Több data pipeline orchestrálása parallel
+- Complex dependencies kezelése
+- Aggregált adatfeldolgozás
+- Conditional training trigger
+
+#### 5. `webhook_triggered_training`
+**Trigger:** API/Webhook (on-demand)
+
+**Funkciók:**
+- REST API triggered training custom paraméterekkel
+- Configuration parsing és validation
+- Training szükségesség ellenőrzés
+- Deployment target environment-be
+- Callback URL support
+
+**API használat:**
+```bash
+curl -X POST http://localhost:8080/trigger/training \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: mlops-secret-key-2025" \
+  -d '{
+    "model_name": "wine_quality_rf_model",
+    "trigger_source": "ci_cd",
+    "force_training": true,
+    "hyperparameters": {"n_estimators": 200}
+  }'
+```
+
+### Metadata Tracking System
+
+**PostgreSQL adatbázis 14 táblával:**
+
+**Fő táblák:**
+- `model_runs` - Training futások tracking
+- `model_metrics` - Metrikák (R², RMSE, MAE, stb.)
+- `model_parameters` - Hyperparaméterek
+- `dataset_versions` - Dataset verziókezelés
+- `data_lineage` - Data-model kapcsolatok
+- `model_comparisons` - Model összehasonlítások
+- `pipeline_events` - Pipeline események (info, warning, error)
+- `notification_history` - Értesítési előzmények
+- `data_drift_events` - Drift detection eredmények
+- `model_monitoring` - Production monitoring
+- `feature_statistics` - Feature store
+- `ab_experiments` - A/B tesztek tracking
+
+**View-k:**
+- `latest_production_models` - Legfrissebb production modellek
+- `recent_pipeline_events` - Friss pipeline események
+- `model_performance_comparison` - Performance összehasonlítás
+
+**Python API:**
+```python
+from airflow.utils.metadata_tracker import MetadataTracker
+
+with MetadataTracker(METADATA_DB_CONN) as tracker:
+    run_id = tracker.create_model_run(...)
+    tracker.log_metrics(run_id, {'r2_score': 0.87})
+    tracker.log_parameters(run_id, {'n_estimators': 100})
+```
+
+### Multi-Channel Notification System
+
+**3 csatorna:**
+- **Email (SMTP/Gmail)** - HTML formázott emailek színkóddal
+- **Slack (Webhooks)** - Rich formatting, emoji indicators
+- **Database** - Audit trail és history tracking
+
+**Notification típusok:**
+- Training start/success/failure
+- Model deployment
+- Model comparison results
+- Data drift alerts
+- Pipeline health issues
+
+**Konfigurálás:**
+```bash
+# .env fájlban
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+TO_EMAILS=admin@example.com,team@example.com
+SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+```
+
+### Webhook Trigger API
+
+**REST API service a DAG-ok triggerelésére:**
+
+**Endpoints:**
+- `GET /health` - Health check
+- `POST /trigger/training` - Training trigger
+- `POST /trigger/evaluation` - Evaluation trigger
+- `GET /status/<dag_id>/<run_id>` - Status check
+- `GET /dags` - Available DAGs
+
+**Features:**
+- API key authentication
+- Request validation
+- Callback URL support
+- Airflow API wrapper
+
+### Airflow UI Elérés
+
 ```bash
 # Access Airflow UI
 http://localhost:8081
 
 # Login: admin / admin
-# Toggle DAG switch to ON
-```
-
-### DAG Configuration
-
-```python
-# Schedule: Daily at 2 AM
-schedule_interval='0 2 * * *'
-
-# Automatic model versioning
-# Automatic staging/production promotion
-# Email notifications on failures
+# Toggle DAG switch to ON/OFF
 ```
 
 ## Monitoring Dashboard
@@ -461,37 +615,293 @@ schedule_interval='0 2 * * *'
 
 Access at http://localhost:8501
 
-**Pages:**
+**Streamlit Dashboard komponensek:**
 
-1. **Overview**
-   - System metrics
-   - Recent training runs
-   - Performance trends
+1. **Overview Page**
+   - System health metrics
+   - Recent training runs summary
+   - Performance trends visualization
+   - Active DAG status
+   - Recent pipeline events
 
 2. **Model Performance**
-   - R² Score trends
-   - RMSE analysis
-   - Metrics comparison
+   - R² Score trends over time
+   - RMSE/MAE analysis
+   - Model comparison charts
+   - Best performing models
+   - Training duration tracking
 
-3. **Data Drift**
-   - Evidently drift detection
-   - Feature distribution analysis
-   - HTML drift reports
+3. **Data Drift Detection**
+   - **Evidently AI integration**
+   - Feature distribution comparison (reference vs current)
+   - Statistical drift tests (KS-test, Chi-square)
+   - Population Stability Index (PSI)
+   - HTML drift reports generation
+   - Automatic drift alerts
 
 4. **Model Registry**
-   - Production models
-   - Model versions
-   - Performance metrics
+   - Production model list
+   - Model versions és stage tracking
+   - Performance metrics comparison
+   - Model deployment history
+   - A/B experiment tracking
+
+5. **Pipeline Monitoring**
+   - DAG execution history
+   - Task success/failure rates
+   - Average execution times
+   - Recent errors és warnings
+   - Notification history
+
+**Features:**
+- Real-time data refresh
+- Interactive Plotly visualizations
+- MLflow integration
+- Metadata database queries
+- Export reports PDF/HTML formátumban
+
+## Teljes Projekt Áttekintés
+
+### Mi van a projektben?
+
+Ez egy **komplett, production-ready MLOps platform**, amely demonstrálja a modern gépi tanulási rendszerek teljes életciklusát:
+
+#### 🤖 Machine Learning
+- **2 regressziós model:** Random Forest és Gradient Boosting
+- **Preprocessing pipeline:** StandardScaler, feature engineering
+- **Hyperparameter tuning:** GridSearchCV 10-fold CV-vel
+- **Performance:** R² ~0.47-0.49, RMSE ~0.57-0.58
+
+#### 🔄 MLOps Automation (Apache Airflow)
+- **5 DAG különböző trigger típusokkal:**
+  1. Schedule-based: Napi automatikus training (2 AM)
+  2. Event-based: FileSensor új adatok detektálására
+  3. ExternalTaskSensor: DAG-ok közötti függőségek
+  4. Webhook: API-triggered training custom config-gal
+  5. Orchestration: Multi-pipeline koordináció
+- **Metadata tracking:** PostgreSQL 14 táblával
+- **Multi-channel notifications:** Email (SMTP/Gmail), Slack, Database
+- **Error handling:** Success/failure/retry callbacks
+
+#### 📊 Model Tracking & Registry (MLflow)
+- **Experiment tracking:** Metrics, parameters, artifacts
+- **Model registry:** Verziókezelés, stage management
+- **Model comparison:** Automated best model selection
+- **Artifact storage:** Model persistence és versioning
+
+#### 🌐 REST APIs (3 API)
+1. **FastAPI** (8000) - Async predictions, Pydantic validation
+2. **Flask-RESTX** (8000) - Traditional REST, mature ecosystem
+3. **Webhook API** (8080) - DAG triggering, API key auth
+
+**API Features:**
+- Single & batch predictions
+- Model training trigger
+- Model metrics és management
+- Health checks
+- Swagger UI documentation
+
+#### 📈 Monitoring & Visualization
+- **Streamlit Dashboard** (8501):
+  - Overview: System metrics, recent runs
+  - Model Performance: R² trends, RMSE analysis
+  - Data Drift: Evidently integration, distribution comparison
+  - Model Registry: Production models, versions
+  - Pipeline Monitoring: DAG execution history, error tracking
+
+#### 🔍 Data Quality & Drift Detection
+- **Automatic validation:** Schema, quality checks
+- **Statistical tests:**
+  - Kolmogorov-Smirnov test
+  - Population Stability Index (PSI)
+  - Chi-square test
+- **Drift threshold:** PSI > 0.2
+- **Automated retraining:** Conditional trigger drift esetén
+
+#### 🐳 Docker Infrastructure
+- **9 containerized services:**
+  - Airflow (webserver + scheduler + init)
+  - MLflow API
+  - Webhook API
+  - Streamlit monitoring
+  - PostgreSQL (2 instance: Airflow + MLOps)
+  - Redis (message broker)
+- **Multi-service orchestration:** docker-compose
+- **Shared volumes:** Models, data, logs, mlruns
+- **Bridge network:** Service-to-service communication
+
+#### 🧪 Testing & Quality
+- **91+ tests:** Unit, integration, API tests
+- **Test coverage:** All modules tested
+- **PEP8 compliant:** 0 linting errors
+- **Code formatting:** Black, flake8
+- **Type checking:** mypy support
+
+#### 📦 Data Pipeline
+- **Dataset:** UCI Wine Quality (red wine)
+- **Features:** 11 physicochemical properties
+- **Target:** Quality score (0-10)
+- **Split:** 80/20 train/test (stratified)
+- **Preprocessing:** Standardization, optional PCA
+
+#### 🔐 Security & Configuration
+- **Environment variables:** .env file
+- **API authentication:** API key-based (Webhook API)
+- **Database credentials:** Configurable
+- **Secret management:** Not hardcoded
+- **Production hardening:** TODO (HTTPS, JWT, rate limiting)
+
+### Workflow Összefoglalás
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Complete MLOps Workflow                   │
+└─────────────────────────────────────────────────────────────┘
+
+1. Data Ingestion
+   └─→ FileSensor detektálja új adatot
+       └─→ Data validation + drift detection
+
+2. Model Training (3 trigger mód)
+   ├─→ Schedule: Napi 2 AM automatikus
+   ├─→ Event: Drift detekció esetén
+   └─→ API: Webhook trigger external system-ből
+
+3. Tracking & Logging
+   ├─→ MLflow: Experiments, runs, metrics, artifacts
+   └─→ PostgreSQL: Metadata, lineage, events, notifications
+
+4. Model Comparison & Deployment
+   └─→ Compare new model vs production
+       ├─→ Better? → Deploy Staging → Production
+       └─→ Not better? → Send notification (no deploy)
+
+5. Monitoring & Alerting
+   ├─→ Streamlit: Real-time dashboard
+   ├─→ Evidently: Drift detection
+   └─→ Notifications: Email + Slack + DB
+
+6. Model Serving
+   └─→ FastAPI/Flask: REST API predictions
+       ├─→ Single prediction
+       ├─→ Batch predictions
+       └─→ Model management
+
+7. External Integration
+   └─→ Webhook API: CI/CD, monitoring systems
+       └─→ Trigger training, evaluation, deployment
+```
+
+### Technológiai Stack
+
+**ML & Data Science:**
+- scikit-learn, pandas, numpy, scipy
+- Feature engineering, hyperparameter tuning
+
+**MLOps & Orchestration:**
+- Apache Airflow - Workflow automation
+- MLflow - Experiment tracking & model registry
+- Evidently AI - Data & model drift detection
+
+**APIs & Web:**
+- FastAPI - Modern async REST
+- Flask-RESTX - Traditional REST
+- Streamlit - Interactive dashboards
+
+**Databases:**
+- PostgreSQL - Airflow & MLOps metadata
+- Redis - Message broker & caching
+
+**Containerization:**
+- Docker - Application containers
+- Docker Compose - Multi-service orchestration
+
+**Monitoring & Visualization:**
+- Plotly - Interactive charts
+- Evidently - Drift reports
+- Custom dashboards
+
+**Testing & Quality:**
+- pytest - Testing framework
+- black - Code formatting
+- flake8 - Linting
+- mypy - Type checking
+
+**Notifications:**
+- SMTP/Gmail - Email alerts
+- Slack Webhooks - Chat notifications
+- Database logging - Audit trail
+
+### Projekt Méretei
+
+- **Total Code:** ~3,500+ lines Python
+- **Test Code:** ~1,300 lines
+- **API Code:** ~1,800 lines (2 prediction + 1 webhook API)
+- **DAG Code:** ~1,500 lines (5 DAG-ok)
+- **Tests:** 91+ test cases
+- **Docker Services:** 9 containers
+- **Database Tables:** 14 metadata tables
+- **API Endpoints:** 30+ endpoints összesen
+
+### Használati Példák
+
+**1. Training trigger scheduled:**
+```bash
+# Airflow automatikusan futtatja naponta 2 AM-kor
+# Vagy manuálisan:
+docker-compose exec airflow-scheduler airflow dags trigger daily_model_training_with_notification
+```
+
+**2. Training trigger webhook-kel:**
+```bash
+curl -X POST http://localhost:8080/trigger/training \
+  -H "X-API-Key: mlops-secret-key-2025" \
+  -H "Content-Type: application/json" \
+  -d '{"model_name": "wine_quality_rf_model", "trigger_source": "manual"}'
+```
+
+**3. Prediction:**
+```bash
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"features": {...}, "model_name": "rf"}'
+```
+
+**4. Monitoring:**
+```bash
+# Streamlit Dashboard
+open http://localhost:8501
+
+# MLflow UI
+open http://localhost:5000
+
+# Airflow UI
+open http://localhost:8081
+```
+
+**5. Metadata query:**
+```sql
+-- Latest production models
+SELECT * FROM latest_production_models;
+
+-- Recent drift events
+SELECT * FROM data_drift_events WHERE drift_detected = true;
+
+-- Model performance comparison
+SELECT * FROM model_performance_comparison ORDER BY performance_rank;
+```
 
 ## Documentation
 
-- **Main README:** This file
-- **Docker Guide:** [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md)
-- **API Docs:** `API_README.md` (detailed API reference)
-- **Swagger UI:** http://localhost:8000/docs
-- **MLflow UI:** http://localhost:5000
-- **Airflow UI:** http://localhost:8081
-- **Monitoring:** http://localhost:8501
+- **Main README:** This file - Teljes projekt áttekintés
+- **API Documentation:** [API_README.md](API_README.md) - 3 API részletes dokumentációja
+- **Docker Guide:** [DOCKER_DEPLOYMENT.md](DOCKER_DEPLOYMENT.md) - Docker deployment
+- **FastAPI Swagger:** http://localhost:8000/docs - Interactive API docs
+- **Flask-RESTX Swagger:** http://localhost:8000/docs/ - Interactive API docs
+- **Webhook API Swagger:** http://localhost:8080/docs - Webhook API docs
+- **MLflow UI:** http://localhost:5000 - Experiment tracking
+- **Airflow UI:** http://localhost:8081 - DAG monitoring
+- **Streamlit Dashboard:** http://localhost:8501 - Real-time monitoring
 
 ## Troubleshooting
 
@@ -546,27 +956,67 @@ MIT License
 ## Architecture Diagram
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   Wine Quality MLOps Platform                │
-├─────────────────────────────────────────────────────────────┤
-│                                                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   Airflow    │  │  MLflow UI   │  │  Streamlit   │      │
-│  │   (8081)     │  │   (5000)     │  │   (8501)     │      │
-│  │              │  │              │  │              │      │
-│  │ - Scheduling │  │ - Tracking   │  │ - Dashboard  │      │
-│  │ - Pipelines  │  │ - Registry   │  │ - Monitoring │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│                                                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  FastAPI     │  │  PostgreSQL  │  │    Redis     │      │
-│  │   (8000)     │  │              │  │              │      │
-│  │              │  │              │  │              │      │
-│  │ - Predictions│  │ - Metadata   │  │ - Queue      │      │
-│  │ - REST API   │  │              │  │              │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│                                                               │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                   Wine Quality MLOps Platform                     │
+│                     (Docker Compose Multi-Service)                 │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                    │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌────────┐ │
+│  │  Airflow    │  │  MLflow UI  │  │ Streamlit   │  │Webhook │ │
+│  │  Webserver  │  │  + FastAPI  │  │  Dashboard  │  │  API   │ │
+│  │   (8081)    │  │   (5000)    │  │   (8501)    │  │ (8080) │ │
+│  │             │  │             │  │             │  │        │ │
+│  │• DAG UI     │  │• Tracking   │  │• Monitoring │  │• Trigger│ │
+│  │• Scheduling │  │• Registry   │  │• Drift Det. │  │• REST  │ │
+│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └───┬────┘ │
+│         │                │                │              │      │
+│  ┌──────┴────────────────┴────────────────┴──────────────┴───┐ │
+│  │                    Shared Volumes                           │ │
+│  │  /models  /mlruns  /data  /logs  /airflow                  │ │
+│  └──────┬────────────────┬────────────────┬──────────────┬───┘ │
+│         │                │                │              │      │
+│  ┌──────┴──────┐  ┌──────┴──────┐  ┌──────┴──────┐  ┌──┴────┐ │
+│  │  Airflow    │  │ PostgreSQL  │  │ PostgreSQL  │  │ Redis │ │
+│  │  Scheduler  │  │  (Airflow)  │  │  (MLOps)    │  │       │ │
+│  │             │  │   (5432)    │  │   (5433)    │  │(6379) │ │
+│  │             │  │             │  │             │  │       │ │
+│  │• Dag Runs   │  │• Airflow    │  │• Metadata   │  │• Queue│ │
+│  │• Tasks      │  │  Metadata   │  │• Tracking   │  │• Cache│ │
+│  └─────────────┘  └─────────────┘  └─────────────┘  └───────┘ │
+│                                                                    │
+└──────────────────────────────────────────────────────────────────┘
+
+Data Flow:
+1. Airflow Scheduler → DAG Tasks végrehajtás
+2. Tasks → MLflow tracking (experiments, runs, metrics)
+3. Tasks → MLOps Metadata DB (pipeline events, model runs, metrics)
+4. Webhook API → Airflow API → DAG trigger
+5. Streamlit → MLflow + MLOps DB → Real-time visualization
+6. FastAPI/Flask → Models → Predictions
 ```
+
+### Docker Services Összefoglalás
+
+**9 Docker Service:**
+
+1. **postgres** - Airflow metadata database
+2. **mlops-metadata-db** - MLOps tracking database (**Dedikált MLOps DB**)
+3. **redis** - Airflow Celery backend
+4. **airflow-webserver** - Airflow UI (8081)
+5. **airflow-scheduler** - DAG scheduling engine
+6. **airflow-init** - Database initialization
+7. **mlflow-api** - MLflow tracking + FastAPI/Flask (5000, 8000)
+8. **streamlit-monitoring** - Monitoring dashboard (8501)
+9. **webhook-api** - Webhook trigger service (8080)
+
+**Volumes:**
+- `./airflow/dags` → `/opt/airflow/dags`
+- `./models` → `/app/models`
+- `./mlruns` → `/app/mlruns`
+- `./data` → `/app/data` és `/opt/airflow/data`
+- `./logs` → `/app/logs`
+
+**Networks:**
+- `mlops-network` - Bridge network összes service számára
 
 For detailed API documentation, see [API_README.md](API_README.md)

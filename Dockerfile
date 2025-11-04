@@ -24,15 +24,17 @@ COPY flask_app.py /app/
 COPY data/ /app/data/
 COPY src/ /app/src/
 COPY models/ /app/models/
-COPY mlruns/ /app/mlruns/
+
+# Create mlruns directory (will be populated at runtime)
+RUN mkdir -p /app/mlruns /app/logs
 
 # Set environment variables
 ENV MLFLOW_TRACKING_URI="file:/app/mlruns"
 ENV PATH="/opt/conda/envs/wine_quality_mlops/bin:$PATH"
-ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV PYTHONPATH="/app"
 
-# Set permissions for the mlruns folder
-RUN chmod -R 777 /app/mlruns
+# Set permissions for the mlruns and logs folders
+RUN chmod -R 777 /app/mlruns /app/logs
 
 # Expose ports for MLflow UI, FastAPI, and Flask
 EXPOSE 5000 8000 8080

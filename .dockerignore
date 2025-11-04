@@ -36,6 +36,9 @@ htmlcov/
 logs/
 *.log
 
+# MLflow
+mlruns/
+
 # Temporary files
 *.tmp
 *.bak
