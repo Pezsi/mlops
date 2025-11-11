@@ -1,0 +1,58 @@
+# Dockerfile for Google Cloud Run deployment
+# Optimized for stateless, containerized ML model serving
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first (for better caching)
+COPY requirements.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir gunicorn
+
+# Set environment variables for Cloud Run
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV MLFLOW_TRACKING_URI="file:/app/mlruns"
+ENV PORT=8080
+
+# Create necessary directories
+RUN mkdir -p /app/mlruns /app/models /app/data /app/logs && \
+    chmod -R 777 /app/mlruns /app/models /app/logs
+
+# Copy application files
+COPY config.py /app/
+COPY src/ /app/src/
+COPY main.py /app/
+COPY fastapi_app.py /app/
+COPY gunicorn_config.py /app/
+
+# Copy pre-trained model if exists (optional)
+COPY models/ /app/models/ 2>/dev/null || true
+
+# Copy data
+COPY data/ /app/data/
+
+# Expose the port Cloud Run expects
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl --fail http://localhost:8080/docs || exit 1
+
+# Use non-root user for security
+RUN useradd -m -u 1000 mlops && chown -R mlops:mlops /app
+USER mlops
+
+# Start FastAPI with Gunicorn for production
+# Cloud Run will set the PORT environment variable
+CMD exec gunicorn --bind :$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 0 fastapi_app:app

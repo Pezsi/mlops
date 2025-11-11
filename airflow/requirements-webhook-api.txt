@@ -1,0 +1,15 @@
+# Webhook Trigger API Requirements
+
+# Flask
+Flask==3.0.0
+Werkzeug==3.0.1
+
+# HTTP requests
+requests==2.31.0
+
+# Database (for metadata tracker)
+psycopg2-binary==2.9.9
+SQLAlchemy==2.0.23
+
+# Utilities
+python-dotenv==1.0.0

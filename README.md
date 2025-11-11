@@ -13,6 +13,7 @@ Full ML pipeline for predicting wine quality using Random Forest and Gradient Bo
 - **Two REST APIs** - FastAPI (async) & Flask-RESTX
 - **Docker Containerization** - Multi-container orchestration with Docker Compose
 - **Apache Airflow** - Automated training pipelines and model deployment
+- **GCP Cloud Run** - Serverless deployment with CI/CD (GitHub Actions)
 - **Streamlit Dashboard** - Real-time monitoring and visualization
 - **Evidently Integration** - Data drift and model drift detection
 - **91+ Tests** - Unit, integration, and API tests
@@ -1018,5 +1019,54 @@ Data Flow:
 
 **Networks:**
 - `mlops-network` - Bridge network összes service számára
+
+---
+
+## Cloud Deployment - GCP Cloud Run
+
+A projekt támogatja **Google Cloud Platform Cloud Run** deployment-et automatikus CI/CD pipeline-nal.
+
+### Jellemzők
+
+- Serverless autoscaling (0-10 instances)
+- Automatikus CI/CD GitHub Actions-szel
+- Production-ready konfiguráció
+- Költséghatékony (pay-per-use, free tier elérhető)
+- HTTPS endpoint automatikus SSL-lel
+
+### Gyors Setup
+
+```bash
+# 1. GCP környezet beállítása
+export GCP_PROJECT_ID="your-project-id"
+./gcp/setup-gcp.sh
+
+# 2. GitHub Secrets beállítása
+# - GCP_PROJECT_ID: your-project-id
+# - GCP_SA_KEY: (gcp-sa-key.json tartalma)
+
+# 3. Deploy
+git push origin main  # Automatikus deployment
+# vagy
+./gcp/deploy.sh      # Manuális deployment
+```
+
+### Monitoring
+
+```bash
+# Interaktív monitoring tool
+./gcp/monitor.sh
+
+# Real-time logs
+gcloud logging tail "resource.type=cloud_run_revision"
+```
+
+### Dokumentáció
+
+- **Teljes útmutató**: [GCP_DEPLOYMENT_GUIDE.md](GCP_DEPLOYMENT_GUIDE.md) - Részletes deployment guide
+- **Gyors útmutató**: [gcp/QUICK_START.md](gcp/QUICK_START.md) - 5 perces setup
+- **Implementáció**: [GCP_IMPLEMENTATION_SUMMARY.md](GCP_IMPLEMENTATION_SUMMARY.md) - Architektúra és összefoglaló
+
+---
 
 For detailed API documentation, see [API_README.md](API_README.md)
