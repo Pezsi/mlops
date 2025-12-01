@@ -1,0 +1,21 @@
+# Snyk Configuration (Lecke 120)
+# https://docs.snyk.io/snyk-cli/test-for-vulnerabilities/the-.snyk-file
+
+version: v1.25.0
+
+# Ignore specific vulnerabilities
+ignore:
+  # Example: Ignore specific vulnerability with expiration
+  # SNYK-PYTHON-EXAMPLE-12345:
+  #   - '*':
+  #       reason: 'No fix available, risk accepted'
+  #       expires: '2025-06-01T00:00:00.000Z'
+
+# Patch instructions (if available)
+patch: {}
+
+# Language settings
+language-settings:
+  python:
+    # Python version for analysis
+    python-version: "3.11"

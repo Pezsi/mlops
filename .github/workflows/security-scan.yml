@@ -1,0 +1,285 @@
+# Security Scanning Workflow (Lecke 117-120)
+# Comprehensive security scanning for ML projects
+
+name: Security Scan
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  schedule:
+    # Run weekly security scans
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+    inputs:
+      full_scan:
+        description: 'Run full security scan'
+        required: false
+        default: 'true'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  # Dependency vulnerability scanning
+  dependency-scan:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety pip-audit bandit semgrep
+
+      - name: Run Safety Check
+        continue-on-error: true
+        run: |
+          safety check -r requirements.txt --json > safety-report.json || true
+          cat safety-report.json
+
+      - name: Run pip-audit
+        continue-on-error: true
+        run: |
+          pip-audit -r requirements.txt --format json > pip-audit-report.json || true
+          cat pip-audit-report.json
+
+      - name: Run Bandit (Python Security Linter)
+        continue-on-error: true
+        run: |
+          bandit -r . -f json -o bandit-report.json --exclude ./venv,./tests || true
+          bandit -r . --exclude ./venv,./tests
+
+      - name: Upload Security Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports
+          path: |
+            safety-report.json
+            pip-audit-report.json
+            bandit-report.json
+          retention-days: 30
+
+  # Container vulnerability scanning
+  container-scan:
+    name: Container Security Scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t wine-quality-mlops:scan -f Dockerfile.cloudrun .
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'wine-quality-mlops:scan'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH,MEDIUM'
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Run Trivy for JSON report
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'wine-quality-mlops:scan'
+          format: 'json'
+          output: 'trivy-results.json'
+
+      - name: Upload Trivy JSON report
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-report
+          path: trivy-results.json
+          retention-days: 30
+
+  # Snyk scanning (if configured)
+  snyk-scan:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    if: ${{ vars.SNYK_ENABLED == 'true' }}
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/python@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run Snyk to check Docker image
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          image: wine-quality-mlops:scan
+          args: --severity-threshold=high
+
+  # SAST (Static Application Security Testing)
+  sast-scan:
+    name: Static Code Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: python
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:python"
+
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/python
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+
+  # Secret scanning
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run TruffleHog
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ""
+          head: HEAD
+          extra_args: --only-verified
+
+  # ML-specific security checks
+  ml-security-scan:
+    name: ML Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install fickling  # Pickle security scanner
+
+      - name: Scan pickle files for security issues
+        continue-on-error: true
+        run: |
+          echo "=== Scanning for potentially malicious pickle files ==="
+          find . -name "*.pkl" -o -name "*.pickle" -o -name "*.joblib" | while read file; do
+            echo "Scanning: $file"
+            python -c "import fickling; fickling.check('$file')" 2>/dev/null || echo "Warning: Could not scan $file"
+          done
+
+      - name: Check model file integrity
+        run: |
+          echo "=== Checking model file integrity ==="
+          python -c "
+          import os
+          import hashlib
+          from pathlib import Path
+
+          model_dir = Path('models')
+          if model_dir.exists():
+              for model_file in model_dir.glob('**/*'):
+                  if model_file.is_file():
+                      with open(model_file, 'rb') as f:
+                          hash_value = hashlib.sha256(f.read()).hexdigest()
+                      print(f'{model_file}: {hash_value[:16]}...')
+          else:
+              print('No models directory found')
+          "
+
+  # Generate security report
+  security-report:
+    name: Generate Security Report
+    runs-on: ubuntu-latest
+    needs: [dependency-scan, container-scan, sast-scan, secret-scan, ml-security-scan]
+    if: always()
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: reports
+        continue-on-error: true
+
+      - name: Generate Summary Report
+        run: |
+          echo "# Security Scan Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Scan | ${{ needs.dependency-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Container Scan | ${{ needs.container-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SAST Scan | ${{ needs.sast-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scan | ${{ needs.secret-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ML Security Scan | ${{ needs.ml-security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "See individual job logs for details." >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on critical findings
+        if: failure()
+        run: |
+          echo "::warning::Security issues detected. Please review the security scan results."

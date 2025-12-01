@@ -1,0 +1,65 @@
+# MLSecOps Security Dependencies
+# Install with: pip install -r requirements-security.txt
+
+# Core dependencies (from main requirements.txt)
+-r requirements.txt
+
+# ==============================================================================
+# Lecke 113: Data and Model Poisoning Detection
+# ==============================================================================
+# Outlier detection and statistics (already in scikit-learn)
+
+# ==============================================================================
+# Lecke 114: Vertex AI Explainable AI and Model Monitoring
+# ==============================================================================
+# SHAP for model explanations
+shap>=0.42.0
+
+# LIME for local explanations
+lime>=0.2.0
+
+# ==============================================================================
+# Lecke 115-116: Model Robustness Testing
+# ==============================================================================
+# Adversarial Robustness Toolbox
+adversarial-robustness-toolbox>=1.15.0
+
+# CleverHans (optional - TensorFlow-based)
+# cleverhans>=4.0.0  # Uncomment if using TensorFlow
+
+# ==============================================================================
+# Lecke 117-118: Container and Dependency Security
+# ==============================================================================
+# Python security scanners
+safety>=2.3.0
+pip-audit>=2.6.0
+bandit>=1.7.0
+
+# License checking
+pip-licenses>=4.0.0
+
+# SBOM generation
+cyclonedx-bom>=4.0.0
+
+# Pickle security scanning
+fickling>=0.0.8
+
+# ==============================================================================
+# Lecke 119-120: Open-source Security Tools Integration
+# ==============================================================================
+# (Snyk and Dependabot are configured via GitHub/CI)
+
+# ==============================================================================
+# Lecke 121-122: External Model Auditing
+# ==============================================================================
+# Hugging Face Hub for model validation
+huggingface_hub>=0.17.0
+
+# ==============================================================================
+# Additional Security Tools
+# ==============================================================================
+# Static analysis
+semgrep>=1.0.0
+
+# Secrets detection (for CI/CD)
+detect-secrets>=1.4.0
