@@ -435,8 +435,10 @@ if __name__ == '__main__':
     logger.info("Starting Webhook Trigger API...")
     logger.info(f"Airflow API URL: {AIRFLOW_API_URL}")
 
+    # nosemgrep: python.flask.security.audit.app-run-param-config.avoid_app_run_with_bad_host
+    # Host 0.0.0.0 is intentional for Docker container networking
     app.run(
-        host='0.0.0.0',
+        host=os.getenv('WEBHOOK_API_HOST', '0.0.0.0'),
         port=int(os.getenv('WEBHOOK_API_PORT', 8080)),
         debug=os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
     )

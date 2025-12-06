@@ -286,10 +286,11 @@ def demo_external_model_validation():
 
     print("\n▶ Testing local pickle scanning...")
     import tempfile
-    import pickle
+    import pickle  # nosemgrep: python.lang.security.deserialization.pickle.avoid-pickle
 
-    # Create a safe test pickle
+    # Create a safe test pickle (intentional for security testing demo)
     with tempfile.NamedTemporaryFile(suffix='.pkl', delete=False) as f:
+        # nosemgrep: python.lang.security.deserialization.pickle.avoid-pickle
         pickle.dump({"safe": "data"}, f)
         temp_path = f.name
 

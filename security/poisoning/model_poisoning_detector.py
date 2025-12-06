@@ -20,7 +20,7 @@ from sklearn.model_selection import cross_val_predict
 from typing import Dict, List, Tuple, Optional, Any, Union
 import logging
 import hashlib
-import pickle
+import pickle  # nosemgrep: python.lang.security.deserialization.pickle.avoid-pickle
 import json
 from datetime import datetime
 from pathlib import Path
