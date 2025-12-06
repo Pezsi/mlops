@@ -203,7 +203,7 @@ jobs:
 
       - name: Start services
         run: |
-          docker-compose up -d mlflow-api
+          docker compose up -d mlflow-api
           sleep 20
 
       - name: Test MLflow API
@@ -230,7 +230,7 @@ jobs:
             }' || exit 1
 
       - name: Stop services
-        run: docker-compose down
+        run: docker compose down
 
   # Security Scanning
   security-scan:
