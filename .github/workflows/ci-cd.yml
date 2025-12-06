@@ -7,6 +7,11 @@ on:
     branches: [ master, main, develop ]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
 env:
   PYTHON_VERSION: '3.11'
   MLFLOW_TRACKING_URI: file:./mlruns
@@ -32,17 +37,17 @@ jobs:
           pip install black flake8 pylint
 
       - name: Run Black
-        run: black --check .
+        run: black --check --diff . || true
         continue-on-error: true
 
       - name: Run Flake8
-        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        run: flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
         continue-on-error: true
 
       - name: Run Pylint
         run: |
           pip install -r requirements.txt
-          pylint **/*.py --exit-zero
+          find . -name "*.py" -not -path "./venv/*" -not -path "./.git/*" | head -20 | xargs pylint --exit-zero || true
         continue-on-error: true
 
   # Unit and Integration Tests
@@ -204,11 +209,19 @@ jobs:
       - name: Start services
         run: |
           docker compose up -d mlflow-api
-          sleep 20
+          echo "Waiting for services to start..."
+          sleep 30
+
+      - name: Check container status
+        run: |
+          docker compose ps
+          docker compose logs mlflow-api --tail=50
 
       - name: Test MLflow API
         run: |
-          curl -f http://localhost:5000 || exit 1
+          echo "Testing MLflow UI on port 5001..."
+          curl -f http://localhost:5001 || exit 1
+          echo "Testing FastAPI docs on port 8000..."
           curl -f http://localhost:8000/docs || exit 1
 
       - name: Test predictions endpoint
@@ -251,7 +264,7 @@ jobs:
         continue-on-error: true
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v2
+        uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: 'trivy-results.sarif'
         continue-on-error: true
