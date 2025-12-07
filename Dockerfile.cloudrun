@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 # Set environment variables for Cloud Run
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH="/app:$PYTHONPATH"
+ENV PYTHONPATH="/app"
 ENV MLFLOW_TRACKING_URI="file:/app/mlruns"
 ENV PORT=8080
 
@@ -37,7 +37,8 @@ COPY fastapi_app.py /app/
 COPY gunicorn_config.py /app/
 
 # Copy pre-trained model if exists (optional)
-COPY models/ /app/models/ 2>/dev/null || true
+# Note: models/ directory must exist, create empty one if needed
+COPY models/ /app/models/
 
 # Copy data
 COPY data/ /app/data/
@@ -55,4 +56,4 @@ USER mlops
 
 # Start FastAPI with Gunicorn for production
 # Cloud Run will set the PORT environment variable
-CMD exec gunicorn --bind :$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 0 fastapi_app:app
+CMD ["sh", "-c", "gunicorn --bind :$PORT --workers 1 --worker-class uvicorn.workers.UvicornWorker --timeout 0 fastapi_app:app"]

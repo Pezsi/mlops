@@ -24,9 +24,14 @@ from datetime import datetime, timedelta
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from evidently.report import Report
-from evidently.metric_preset import DataDriftPreset, RegressionPreset
-from evidently.metrics import *
+# Evidently imports - compatible with v0.7.x
+try:
+    from evidently import Report
+    from evidently.presets import DataDriftPreset
+except ImportError:
+    # Fallback for different evidently versions
+    Report = None
+    DataDriftPreset = None
 
 # Page configuration
 st.set_page_config(
@@ -214,20 +219,23 @@ def analyze_data_drift(reference_data, current_data):
     if reference_data is None or current_data is None:
         return None
 
+    if Report is None or DataDriftPreset is None:
+        st.warning("Evidently library not available for drift analysis.")
+        return None
+
     try:
-        # Create drift report
-        report = Report(metrics=[
-            DataDriftPreset(),
-        ])
+        # Create drift report (evidently 0.7.x API)
+        report = Report([DataDriftPreset()])
 
         # Ensure same columns
         common_cols = list(set(reference_data.columns) & set(current_data.columns))
         ref_subset = reference_data[common_cols].copy()
         curr_subset = current_data[common_cols].copy()
 
-        report.run(reference_data=ref_subset, current_data=curr_subset)
+        # run() returns a Snapshot object with save_html method
+        result = report.run(reference_data=ref_subset, current_data=curr_subset)
 
-        return report
+        return result
     except Exception as e:
         st.error(f"Error in drift analysis: {e}")
         return None
