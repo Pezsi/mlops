@@ -51,6 +51,7 @@ AIRFLOW_API_URL = os.getenv('AIRFLOW_API_URL', 'http://localhost:8081/api/v1')
 AIRFLOW_USERNAME = os.getenv('AIRFLOW_USERNAME', 'admin')
 AIRFLOW_PASSWORD = os.getenv('AIRFLOW_PASSWORD', 'admin')
 API_KEY = os.getenv('WEBHOOK_API_KEY', 'mlops-secret-key-2025')
+REFERENCE_DATASET = os.getenv('REFERENCE_DATASET', 'data/winequality-red.csv')
 
 # Create basic auth header for Airflow API
 auth_string = f"{AIRFLOW_USERNAME}:{AIRFLOW_PASSWORD}"

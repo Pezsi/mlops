@@ -17,10 +17,10 @@ Reference: OWASP ML Security Top 10 - ML01:2023 Input Manipulation
 
 import numpy as np
 import pandas as pd
-from sklearn.base import BaseEstimator, clone
+from sklearn.base import BaseEstimator
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
-from typing import Dict, List, Tuple, Optional, Any, Callable
+from sklearn.metrics import accuracy_score, r2_score
+from typing import Dict, List, Tuple, Optional, Any
 import logging
 from datetime import datetime
 
@@ -38,7 +38,7 @@ except ImportError:
     logger.warning("ART not available. Install with: pip install adversarial-robustness-toolbox")
 
 try:
-    import cleverhans
+    import cleverhans  # noqa: F401
     CLEVERHANS_AVAILABLE = True
 except ImportError:
     CLEVERHANS_AVAILABLE = False

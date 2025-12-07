@@ -9,20 +9,19 @@ Tests cover:
 - Lecke 121-122: External Model Auditing
 """
 
-import pytest
-import numpy as np
-import pandas as pd
-from sklearn.datasets import load_wine, load_iris
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
-from sklearn.model_selection import train_test_split
-import tempfile
-import os
+import sys
 from pathlib import Path
 
-# Import security modules
-import sys
+# Add parent to path before other imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import pytest
+import pandas as pd
+from sklearn.datasets import load_wine
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from sklearn.model_selection import train_test_split
+
+# Import security modules
 from security.poisoning.data_poisoning_detector import DataPoisoningDetector
 from security.poisoning.model_poisoning_detector import ModelPoisoningDetector
 from security.robustness.adversarial_tester import AdversarialTester
@@ -640,7 +639,7 @@ class TestExternalModelValidator:
             expected_hash=expected_hash
         )
 
-        assert report["verified"] == True
+        assert report["verified"] is True
         assert report["computed_hash"] == expected_hash
 
     def test_verify_model_signature_mismatch(self, tmp_path):
@@ -654,7 +653,7 @@ class TestExternalModelValidator:
             expected_hash="wrong_hash"
         )
 
-        assert report["verified"] == False
+        assert report["verified"] is False
         assert "error" in report
 
     def test_audit_local_model(self, trained_classifier, tmp_path):
