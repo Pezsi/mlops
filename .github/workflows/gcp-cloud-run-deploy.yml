@@ -1,10 +1,20 @@
 name: Deploy to GCP Cloud Run
 
+# ==============================================================================
+# GCP SECRETS CONFIGURED:
+# - GCP_PROJECT_ID: still-freedom-335222
+# - GCP_SA_KEY: Service Account JSON key (github-actions@still-freedom-335222)
+# - Artifact Registry: europe-west1-docker.pkg.dev/still-freedom-335222/wine-quality-mlops
+#
+# To enable automatic deployment, uncomment the 'push' trigger below.
+# ==============================================================================
+
 on:
-  push:
-    branches:
-      - main
-      - master
+  # Automatic deployment disabled - uncomment to enable
+  # push:
+  #   branches:
+  #     - main
+  #     - master
   workflow_dispatch:
     inputs:
       environment:
