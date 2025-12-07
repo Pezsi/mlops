@@ -49,3 +49,31 @@ airflow/logs/
 # Monitoring reports
 monitoring/*.html
 monitoring/drift_report.html
+
+# Pip output files (accidentally created)
+=*
+
+# Airflow specific
+airflow/airflow.cfg
+airflow/webserver_config.py
+airflow/*.db
+
+# Sensitive data
+*.pem
+*.key
+secrets.json
+gcp-sa-key.json
+*-credentials.json
+
+# Environment files with secrets
+.env.local
+.env.production
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Coverage reports
+coverage.xml
+.coverage.*

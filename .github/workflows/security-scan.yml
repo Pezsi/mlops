@@ -183,6 +183,8 @@ jobs:
   secret-scan:
     name: Secret Detection
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -207,6 +209,8 @@ jobs:
   ml-security-scan:
     name: ML Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout code
@@ -257,6 +261,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [dependency-scan, container-scan, sast-scan, secret-scan, ml-security-scan]
     if: always()
+    permissions:
+      contents: read
 
     steps:
       - name: Download all artifacts

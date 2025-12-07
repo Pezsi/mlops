@@ -8,8 +8,12 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user for security
+RUN useradd -m -u 1000 apiuser
 
 # Copy requirements
 COPY airflow/requirements-webhook-api.txt /app/requirements.txt
@@ -18,14 +22,22 @@ COPY airflow/requirements-webhook-api.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy API code
-COPY airflow/api /app/api
-COPY airflow/utils /app/utils
+COPY --chown=apiuser:apiuser airflow/api /app/api
+COPY --chown=apiuser:apiuser airflow/utils /app/utils
 
-# Set Python path
-ENV PYTHONPATH="/app"
+# Set Python path and environment
+ENV PYTHONPATH="/app" \
+    PYTHONUNBUFFERED=1
 
 # Expose port
 EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl --fail http://localhost:8080/health || exit 1
+
+# Switch to non-root user
+USER apiuser
 
 # Run the API
 CMD ["python", "/app/api/webhook_trigger_api.py"]

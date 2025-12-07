@@ -34,8 +34,8 @@ ENV MLFLOW_TRACKING_URI="file:/app/mlruns"
 ENV PATH="/opt/conda/envs/wine_quality_mlops/bin:$PATH"
 ENV PYTHONPATH="/app"
 
-# Set permissions for the mlruns and logs folders
-RUN chmod -R 777 /app/mlruns /app/logs
+# Set permissions for the mlruns and logs folders (secure permissions)
+RUN chmod -R 755 /app/mlruns /app/logs
 
 # Expose ports for MLflow UI, FastAPI, and Flask
 EXPOSE 5000 8000 8080

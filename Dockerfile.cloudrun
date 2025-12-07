@@ -25,9 +25,9 @@ ENV PYTHONPATH="/app:$PYTHONPATH"
 ENV MLFLOW_TRACKING_URI="file:/app/mlruns"
 ENV PORT=8080
 
-# Create necessary directories
+# Create necessary directories with secure permissions
 RUN mkdir -p /app/mlruns /app/models /app/data /app/logs && \
-    chmod -R 777 /app/mlruns /app/models /app/logs
+    chmod -R 755 /app/mlruns /app/models /app/logs
 
 # Copy application files
 COPY config.py /app/

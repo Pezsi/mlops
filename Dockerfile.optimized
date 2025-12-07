@@ -37,9 +37,9 @@ ENV PATH="/opt/venv/bin:$PATH"
 ENV PYTHONPATH="/app:$PYTHONPATH"
 ENV MLFLOW_TRACKING_URI="file:/app/mlruns"
 
-# Create necessary directories
+# Create necessary directories with secure permissions
 RUN mkdir -p /app/mlruns /app/models /app/data /app/logs && \
-    chmod -R 777 /app/mlruns /app/models /app/logs
+    chmod -R 755 /app/mlruns /app/models /app/logs
 
 # Copy application files (order by change frequency - least to most)
 COPY config.py /app/
