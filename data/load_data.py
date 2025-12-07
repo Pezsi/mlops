@@ -5,7 +5,8 @@ training and test sets. Follows PEP8 conventions with type hints.
 """
 
 import logging
-from typing import Tuple
+import random
+from typing import Tuple, Optional
 
 import pandas as pd
 from sklearn.model_selection import train_test_split
@@ -60,7 +61,7 @@ def load_wine_quality_data(url: str = config.DATASET_URL) -> pd.DataFrame:
 def split_data(
     data: pd.DataFrame,
     test_size: float = config.TEST_SIZE,
-    random_state: int = config.RANDOM_STATE,
+    random_state: Optional[int] = None,
     stratify: bool = config.STRATIFY_SPLIT,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
     """Split data into training and test sets.
@@ -68,7 +69,7 @@ def split_data(
     Args:
         data: DataFrame containing features and target.
         test_size: Proportion of dataset to include in test split (0.0-1.0).
-        random_state: Random seed for reproducibility.
+        random_state: Random seed for reproducibility. If None, uses config settings.
         stratify: Whether to stratify split based on target variable.
 
     Returns:
@@ -82,6 +83,15 @@ def split_data(
 
     if config.TARGET_COLUMN not in data.columns:
         raise ValueError(f"Target column '{config.TARGET_COLUMN}' not found in data")
+
+    # Determine random state
+    if random_state is None:
+        if config.USE_RANDOM_SEED:
+            random_state = random.randint(1, 10000)
+            logger.info(f"Using random seed: {random_state}")
+        else:
+            random_state = config.RANDOM_STATE
+            logger.info(f"Using fixed seed: {random_state}")
 
     logger.info("Splitting data into train/test sets...")
 

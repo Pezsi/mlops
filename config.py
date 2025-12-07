@@ -25,7 +25,8 @@ DATASET_URL: str = (
 
 # Data splitting parameters
 TEST_SIZE: float = 0.2
-RANDOM_STATE: int = 123
+RANDOM_STATE: int = 123  # Default seed, can be overridden with USE_RANDOM_SEED
+USE_RANDOM_SEED: bool = True  # If True, use random seed each run for varied results
 STRATIFY_SPLIT: bool = True
 
 # Model hyperparameters - RandomForest
@@ -36,8 +37,10 @@ MODEL_PARAMS: Dict[str, Any] = {
 
 # GridSearchCV hyperparameter grid - RandomForest
 HYPERPARAM_GRID: Dict[str, List[Any]] = {
+    "randomforestregressor__n_estimators": [50, 100, 150],
     "randomforestregressor__max_features": ["sqrt", "log2"],
-    "randomforestregressor__max_depth": [None, 5, 3, 1],
+    "randomforestregressor__max_depth": [None, 10, 5, 3],
+    "randomforestregressor__min_samples_split": [2, 5, 10],
 }
 
 # Model hyperparameters - GradientBoosting
