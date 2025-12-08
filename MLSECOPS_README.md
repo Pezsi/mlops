@@ -1,539 +1,390 @@
 # MLSecOps Security Module
 
-Ez a modul átfogó ML biztonsági funkciókat biztosít a Wine Quality MLOps projekthez.
-
-## Tartalomjegyzék
-
-1. [Áttekintés](#áttekintés)
-2. [Telepítés](#telepítés)
-3. [Modulok](#modulok)
-   - [Adat- és Modellmérgezés Detektálás (Lecke 113)](#adat--és-modellmérgezés-detektálás)
-   - [Vertex AI Explainable AI & Monitoring (Lecke 114)](#vertex-ai-explainable-ai--monitoring)
-   - [Modellrobosztusság Tesztelés (Lecke 115-116)](#modellrobosztusság-tesztelés)
-   - [Függőség Biztonsági Ellenőrzés (Lecke 117-120)](#függőség-biztonsági-ellenőrzés)
-   - [Külső Modell Auditálás (Lecke 121-122)](#külső-modell-auditálás)
-4. [Használati Példák](#használati-példák)
-5. [CI/CD Integráció](#cicd-integráció)
-6. [Best Practices](#best-practices)
+Technical documentation for the security module integrated into the Wine Quality MLOps platform. This module implements comprehensive machine learning security practices based on the OWASP ML Security Top 10 guidelines.
 
 ---
 
-## Áttekintés
+## Table of Contents
 
-A MLSecOps modul az OWASP ML Security Top 10 alapján készült, és a következő biztonsági területeket fedi le:
-
-| Lecke | Téma | Modul |
-|-------|------|-------|
-| 113 | Adat- és modellmérgezés vizsgálata | `security/poisoning/` |
-| 114 | Vertex AI Explainable AI és Model Monitoring | `security/vertex_ai/` |
-| 115-116 | Modellrobosztusság tesztelése (CleverHans, ART) | `security/robustness/` |
-| 117-118 | Cloud Build + Container Analysis | `security/dependency_audit/` |
-| 119-120 | Dependabot és Snyk | `.github/dependabot.yml` |
-| 121-122 | Külső modellek auditálása (Hugging Face) | `security/model_audit/` |
+1. [Overview](#overview)
+2. [Why ML Security Matters](#why-ml-security-matters)
+3. [Security Components](#security-components)
+4. [CI/CD Security Integration](#cicd-security-integration)
+5. [Implementation Guide](#implementation-guide)
+6. [References](#references)
 
 ---
 
-## Telepítés
+## Overview
 
-### Alap telepítés
-```bash
-pip install -r requirements.txt
-```
+Machine learning systems face unique security challenges that traditional software security practices do not address. This module provides automated detection and prevention mechanisms for ML-specific vulnerabilities, enabling secure deployment of models in production environments.
 
-### Teljes biztonsági toolkit
-```bash
-pip install -r requirements-security.txt
-```
+### The Security Challenge
 
-### Opcionális függőségek
-```bash
-# SHAP és LIME az explainability-hez
-pip install shap lime
+Traditional software security focuses on preventing unauthorized access, data breaches, and code injection. Machine learning systems inherit all these concerns while adding entirely new attack surfaces. Models can be poisoned through malicious training data. Adversarial inputs can cause misclassification. Trained models can leak sensitive information about their training data. Third-party models from public repositories may contain hidden backdoors.
 
-# Adversarial Robustness Toolbox
-pip install adversarial-robustness-toolbox
+The MLSecOps module addresses these ML-specific threats through a defense-in-depth approach. Multiple detection mechanisms work together, so even if one fails, others provide protection. Continuous monitoring catches attacks that evade initial defenses. Automated scanning integrates security into the development workflow rather than treating it as an afterthought.
 
-# Hugging Face integráció
-pip install huggingface_hub
+### OWASP ML Security Top 10 Alignment
 
-# Biztonsági scannerek
-pip install safety pip-audit bandit
-```
+The Open Web Application Security Project maintains a list of the most critical security risks for machine learning systems. This module addresses each of these risks through specific components:
 
----
+**ML01 - Input Manipulation**: Attackers craft inputs designed to cause incorrect predictions. The adversarial robustness testing component evaluates model resistance to such attacks by simulating various perturbation strategies and measuring prediction stability.
 
-## Modulok
+**ML02 - Data Poisoning**: Malicious actors inject corrupted samples into training data to compromise model behavior. The data poisoning detection component identifies statistical anomalies, suspicious patterns, and potential label manipulation before poisoned data affects training.
 
-### Adat- és Modellmérgezés Detektálás
+**ML03 - Model Inversion**: Attackers query the model to reconstruct sensitive training data. The model monitoring component tracks prediction patterns that might indicate systematic probing attempts.
 
-**Fájlok:**
-- `security/poisoning/data_poisoning_detector.py`
-- `security/poisoning/model_poisoning_detector.py`
+**ML04 - Membership Inference**: Adversaries determine whether specific data points were in the training set. Monitoring tracks query patterns that suggest membership inference attacks.
 
-**Funkciók:**
+**ML05 - Model Stealing**: Competitors or attackers replicate the model through systematic querying. Rate limiting and query pattern analysis help detect extraction attempts.
 
-#### DataPoisoningDetector
-```python
-from security.poisoning.data_poisoning_detector import DataPoisoningDetector
+**ML06 - AI Supply Chain**: Third-party models or datasets introduce vulnerabilities. The external model validation component verifies provenance, scans for malicious code, and checks community trust indicators.
 
-# Inicializálás
-detector = DataPoisoningDetector(
-    contamination=0.1,      # Várt outlier arány
-    z_score_threshold=3.0,  # Z-score küszöb
-    iqr_multiplier=1.5      # IQR szorzó
-)
+**ML07 - Transfer Learning Attack**: Pre-trained models contain hidden backdoors activated by specific triggers. Model integrity verification detects anomalous weight distributions and suspicious activation patterns.
 
-# Baseline statisztikák
-baseline = detector.compute_baseline_statistics(X_train, y_train)
+**ML08 - Model Skewing**: Production data drifts from training data, degrading performance. Continuous drift detection identifies distribution shifts before they significantly impact predictions.
 
-# Outlier detektálás
-zscore_mask, _ = detector.detect_outliers_zscore(X)
-iqr_mask, _ = detector.detect_outliers_iqr(X)
-iso_mask, scores = detector.detect_outliers_isolation_forest(X)
-lof_mask, scores = detector.detect_outliers_lof(X)
+**ML09 - Output Integrity**: Model outputs are manipulated before reaching users. Prediction logging and validation ensure outputs match expected patterns.
 
-# Label flipping detektálás
-suspicious_mask, report = detector.detect_label_flipping(X, y)
-
-# Backdoor pattern detektálás
-backdoor_report = detector.detect_backdoor_patterns(X, y)
-
-# Teljes elemzés
-full_report = detector.run_full_analysis(X, y)
-print(f"Risk Level: {full_report['overall_risk_assessment']['risk_level']}")
-```
-
-#### ModelPoisoningDetector
-```python
-from security.poisoning.model_poisoning_detector import ModelPoisoningDetector
-
-# Inicializálás
-detector = ModelPoisoningDetector(
-    reference_model=clean_model,  # Opcionális referencia modell
-    performance_threshold=0.1
-)
-
-# Modell fingerprint
-fingerprint = detector.compute_model_fingerprint(model)
-
-# Integritás ellenőrzés
-is_valid = detector.verify_model_integrity(model, expected_fingerprint)
-
-# Súly elemzés
-weight_report = detector.analyze_weight_distribution(model)
-
-# Backdoor trigger detektálás
-backdoor_report = detector.detect_backdoor_triggers(model, X, y)
-
-# Teljes elemzés
-report = detector.run_full_analysis(model, X, y, is_classifier=True)
-```
+**ML10 - Model Poisoning**: Attackers modify model weights or architecture to introduce backdoors. Model fingerprinting and integrity verification detect unauthorized modifications.
 
 ---
 
-### Vertex AI Explainable AI & Monitoring
+## Why ML Security Matters
 
-**Fájlok:**
-- `security/vertex_ai/explainable_ai.py`
-- `security/vertex_ai/model_monitoring.py`
+### Real-World Attack Scenarios
 
-#### ExplainableAI
-```python
-from security.vertex_ai.explainable_ai import ExplainableAI
+Understanding concrete attack scenarios helps appreciate why ML security requires dedicated attention.
 
-# Inicializálás
-explainer = ExplainableAI(
-    model=trained_model,
-    feature_names=feature_names,
-    task_type="classification"  # vagy "regression"
-)
+**Scenario 1 - Training Data Poisoning**: A competitor wants to degrade a wine quality prediction service. They contribute seemingly legitimate data to a public wine dataset, but the samples are carefully crafted to create blind spots in the model. Wines with certain chemical profiles consistently receive incorrect quality predictions. The data poisoning detection component identifies these samples through statistical analysis before they corrupt the model.
 
-# SHAP inicializálás és magyarázat
-explainer.initialize_shap(X_train)
-shap_report = explainer.explain_shap(X_test)
-print("Top features:", shap_report["top_features"])
+**Scenario 2 - Adversarial Evasion**: A wine producer wants their low-quality product to receive high ratings. They determine which chemical measurements the model relies on most heavily and artificially adjust those values in their test submissions. The adversarial robustness testing component evaluates whether small input perturbations can flip predictions, identifying this vulnerability before deployment.
 
-# LIME magyarázat egyetlen mintára
-explainer.initialize_lime(X_train)
-lime_report = explainer.explain_lime(X_test.iloc[0])
+**Scenario 3 - Model Supply Chain Attack**: A developer downloads a pre-trained model from a public repository to use as a starting point. Unknown to them, the model contains a backdoor that activates when inputs match specific patterns, returning manipulated predictions. The external model validation component scans for known malicious patterns and verifies model provenance before allowing deployment.
 
-# Permutation importance
-perm_report = explainer.compute_permutation_importance(X_test, y_test)
+**Scenario 4 - Dependency Vulnerability**: A widely-used ML library contains a security flaw that allows remote code execution. The dependency scanning component identifies this vulnerability immediately, blocking deployment until the library is updated.
 
-# Vertex AI konfiguráció generálás
-vertex_config = explainer.generate_vertex_ai_config(X_train)
-```
+### Compliance and Regulatory Considerations
 
-#### ModelMonitor
-```python
-from security.vertex_ai.model_monitoring import ModelMonitor
+Industries increasingly require explainable and auditable ML systems. Financial services must justify automated decisions. Healthcare applications require understanding of model behavior. The EU AI Act mandates transparency for high-risk applications.
 
-# Inicializálás
-monitor = ModelMonitor(
-    model=trained_model,
-    feature_names=feature_names,
-    task_type="classification",
-    window_size=1000,
-    drift_threshold=0.1
-)
-
-# Baseline beállítása
-baseline = monitor.set_baseline(X_train, y_train)
-
-# Predikciók logolása (éles környezetben)
-for batch in production_data:
-    predictions = model.predict(batch)
-    status = monitor.log_prediction(batch, predictions)
-
-    if status["drift_detected"]:
-        print("ALERT: Drift detected!")
-        for alert in status["alerts"]:
-            print(f"  - {alert['type']}: {alert['severity']}")
-
-# Drift ellenőrzés
-drift_report = monitor.check_drift()
-
-# Teljesítmény értékelés (ha van ground truth)
-perf_report = monitor.evaluate_performance()
-
-# Összefoglaló
-summary = monitor.get_monitoring_summary()
-```
+The explainability component provides the documentation needed for compliance. SHAP and LIME explanations demonstrate which features drive predictions. Audit trails track every model version with full provenance. Monitoring logs preserve evidence of proper operation.
 
 ---
 
-### Modellrobosztusság Tesztelés
+## Security Components
 
-**Fájl:** `security/robustness/adversarial_tester.py`
+### Data Poisoning Detection
 
-```python
-from security.robustness.adversarial_tester import AdversarialTester
+Data poisoning attacks compromise model behavior by corrupting training data. The attack can be subtle, introducing just enough malicious samples to create specific failure modes without triggering obvious data quality issues.
 
-# Inicializálás
-tester = AdversarialTester(
-    model=trained_model,
-    feature_names=feature_names,
-    task_type="classification"
-)
+#### Detection Philosophy
 
-# ART inicializálás (ha elérhető)
-tester.initialize_art(X_train.values)
+Effective poisoning detection requires multiple complementary approaches. Statistical methods identify samples that deviate from expected distributions. Machine learning methods learn what "normal" data looks like and flag anomalies. Label analysis detects samples whose labels seem inconsistent with their features. Pattern analysis identifies systematic poisoning attempts.
 
-# Perturbációs támadás
-perturb_report = tester.perturbation_attack(
-    X_test, y_test,
-    epsilon_values=[0.01, 0.05, 0.1, 0.2]
-)
+No single method catches all attacks. A sophisticated attacker might craft samples that pass statistical checks but still corrupt model behavior. By combining multiple detection methods and requiring consensus, the system achieves robust detection that individual methods cannot provide.
 
-# FGSM támadás
-fgsm_report = tester.fgsm_attack(X_test, y_test, epsilon=0.1)
+#### Statistical Outlier Detection
 
-# PGD támadás
-pgd_report = tester.pgd_attack(
-    X_test, y_test,
-    epsilon=0.1,
-    max_iter=40
-)
+The Z-score method compares each feature value against the distribution of that feature across the dataset. Values more than three standard deviations from the mean receive scrutiny. This catches obvious outliers but misses attacks using values within normal ranges.
 
-# Feature importance támadás
-fi_report = tester.feature_importance_attack(
-    X_test, y_test,
-    top_k_features=3
-)
+Interquartile range analysis identifies values far from the median, using quartile boundaries rather than mean and standard deviation. This approach resists manipulation by extreme outliers that might skew statistical measures.
 
-# Boundary támadás (csak classification)
-boundary_report = tester.boundary_attack(X_test, y_test)
+#### Machine Learning Anomaly Detection
 
-# Teljes robusztusság teszt
-full_report = tester.run_full_robustness_test(X_test, y_test)
-print(f"Robustness Grade: {full_report['overall_robustness']['grade']}")
-```
+Isolation Forest builds an ensemble of random trees that isolate data points. Anomalous points require fewer splits to isolate because they occupy sparse regions of the feature space. The algorithm assigns anomaly scores without requiring labeled examples of attacks.
+
+Local Outlier Factor compares each point's local density against its neighbors' densities. Points in sparse regions surrounded by dense neighborhoods receive high outlier scores. This catches anomalies that global methods miss because they appear normal on individual features but abnormal in combination.
+
+#### Label Manipulation Detection
+
+Label flipping attacks change the target values of training samples without modifying features. A wine genuinely deserving a quality score of 7 might be labeled as 3. When enough labels flip, the model learns incorrect associations.
+
+Detection examines whether sample features match their assigned labels. A sophisticated classifier estimates the probability that each sample's label is correct given its features. Samples with low probability warrant investigation.
+
+#### Backdoor Pattern Detection
+
+Systematic poisoning introduces patterns that trigger specific model behaviors. The attacker might add a barely perceptible "watermark" to inputs that causes misclassification. Detection searches for feature combinations that appear in suspicious clusters or that correlate strongly with particular predictions.
+
+#### Risk Assessment
+
+After running all detection methods, the system produces an overall risk assessment. Low risk indicates no significant anomalies detected across any method. Medium risk means some methods flagged potential issues warranting investigation. High risk indicates multiple methods agree that significant contamination likely exists.
+
+The implementation resides in `security/poisoning/data_poisoning_detector.py`.
 
 ---
 
-### Függőség Biztonsági Ellenőrzés
+### Model Poisoning Detection
 
-**Fájl:** `security/dependency_audit/dependency_scanner.py`
+Model poisoning attacks compromise trained models rather than training data. An attacker with access to model files might modify weights to introduce backdoors. A supply chain attack might deliver pre-poisoned models. Detection focuses on verifying model integrity and identifying suspicious patterns.
 
-```python
-from security.dependency_audit.dependency_scanner import DependencyScanner, ContainerScanner
+#### Model Fingerprinting
 
-# Dependency scanning
-scanner = DependencyScanner(
-    project_path=".",
-    requirements_file="requirements.txt"
-)
+Fingerprinting creates a cryptographic hash of model parameters that serves as a unique identifier. Any modification to the model, even changing a single weight by a tiny amount, produces a completely different fingerprint. By comparing fingerprints against known-good values, the system detects unauthorized modifications.
 
-# Safety scan
-safety_report = scanner.scan_with_safety()
+Fingerprints generate at training time and store in the model registry alongside the model itself. Before deployment, the system recomputes the fingerprint and compares against the stored value. Mismatches indicate the model was modified after training, whether through attack or accident.
 
-# pip-audit scan
-audit_report = scanner.scan_with_pip_audit()
+#### Weight Distribution Analysis
 
-# Typosquatting ellenőrzés
-typo_report = scanner.check_for_typosquatting()
+Legitimately trained models exhibit characteristic weight distributions. Weights typically follow roughly normal distributions centered near zero. Poisoned models may show unusual patterns: unexpected peaks in weight distributions, extreme outliers, or suspicious symmetries.
 
-# Licenc compliance
-license_report = scanner.check_license_compliance(
-    allowed_licenses=["MIT", "Apache-2.0", "BSD-3-Clause"]
-)
+Statistical analysis compares weight distributions against expectations. Anomalous distributions trigger alerts for human review. This catches attacks that modify many small weights rather than a few large ones.
 
-# Elavult csomagok
-outdated_report = scanner.check_outdated_packages()
+#### Backdoor Trigger Detection
 
-# Teljes scan
-full_report = scanner.run_full_scan()
-print(f"Overall Risk: {full_report['summary']['overall_risk']}")
+Backdoor attacks insert hidden behaviors activated by specific input patterns. The model performs normally on regular inputs but produces attacker-chosen outputs when the trigger pattern appears. Detection probes the model with various inputs, searching for behaviors consistent with backdoor activation.
 
-# Container scanning
-container_scanner = ContainerScanner("wine-quality-mlops:latest")
-trivy_report = container_scanner.scan_with_trivy()
-```
+The system generates inputs across the feature space and monitors for unexpectedly consistent predictions that might indicate trigger responses. Legitimate models show varying predictions across diverse inputs. Backdoored models may show suspiciously stable predictions on certain input patterns.
+
+#### Behavioral Comparison
+
+When a reference model exists, comparing behaviors provides powerful detection. The system feeds identical inputs to both models and compares predictions. Significant divergence on specific input regions suggests the tested model was modified.
+
+This technique catches backdoors that other methods miss because it directly observes behavioral changes rather than inferring them from model internals.
+
+The implementation resides in `security/poisoning/model_poisoning_detector.py`.
 
 ---
 
-### Külső Modell Auditálás
+### Explainable AI
 
-**Fájl:** `security/model_audit/external_model_validator.py`
+Model explainability serves both security and compliance purposes. Understanding why a model makes specific predictions helps identify when adversarial manipulation affects outputs. Explanations also satisfy regulatory requirements for decision justification.
 
-```python
-from security.model_audit.external_model_validator import ExternalModelValidator
+#### SHAP Explanations
 
-# Inicializálás (opcionális HF token)
-validator = ExternalModelValidator(
-    hf_token="hf_xxx"  # vagy HF_TOKEN env var
-)
+SHAP (SHapley Additive exPlanations) applies game theory concepts to feature attribution. The method calculates each feature's contribution to a prediction by considering all possible feature combinations. The result shows exactly how much each input feature pushed the prediction higher or lower.
 
-# Hugging Face modell validálás
-report = validator.validate_huggingface_model(
-    model_id="bert-base-uncased",
-    check_security=True,
-    check_license=True,
-    check_card=True
-)
+For wine quality prediction, SHAP might reveal that alcohol content contributed +0.5 to the quality score while volatile acidity contributed -0.3. This granular attribution enables understanding of model behavior and detection of anomalous reasoning patterns.
 
-print(f"Status: {report['overall_status']}")
-print(f"Trusted: {report['validation_results']['provenance']['is_trusted']}")
-print(f"License OK: {report['validation_results']['license']['is_compliant']}")
+SHAP explanations help detect adversarial attacks by revealing when predictions rely on unexpected features. If a prediction depends heavily on features that should not matter, manipulation may be occurring.
 
-# Pickle fájl biztonsági scan
-pickle_report = validator.scan_pickle_file("model.pkl")
+#### LIME Explanations
 
-# Modell signature ellenőrzés
-verify_report = validator.verify_model_signature(
-    "model.pkl",
-    expected_hash="abc123..."
-)
+LIME (Local Interpretable Model-agnostic Explanations) creates simple surrogate models that approximate complex model behavior in local regions. For a specific prediction, LIME perturbs the input and observes how predictions change, then fits a linear model to capture the local relationship.
 
-# Helyi modell auditálás
-audit_report = validator.audit_local_model("./models/")
+The surrogate model provides interpretable coefficients showing feature importance for that specific prediction. Unlike SHAP which considers global feature interactions, LIME focuses on local behavior, potentially catching manipulation that only affects certain input regions.
 
-# Attestation dokumentum generálás
-attestation = validator.generate_model_attestation(
-    model_path="./models/model.pkl",
-    model_id="wine-quality-rf",
-    validation_report=report
-)
-```
+#### Permutation Importance
+
+Permutation importance measures global feature importance by shuffling each feature and measuring prediction degradation. Features the model relies on heavily cause significant performance drops when shuffled. Unimportant features have minimal effect.
+
+This analysis identifies which features actually drive model decisions versus which features correlate accidentally with predictions. For security purposes, unexpected importance rankings may indicate model compromise.
+
+#### Security Applications
+
+Explainability tools directly support security in several ways. Unusual feature attributions suggest adversarial manipulation. Explanations that change dramatically for similar inputs indicate potential attacks. Comparing explanations across model versions reveals whether updates introduced unexpected behavior changes.
+
+The implementation resides in `security/vertex_ai/explainable_ai.py`.
 
 ---
 
-## Használati Példák
+### Model Monitoring
 
-### Teljes Biztonsági Pipeline
+Production model monitoring detects problems before they significantly impact users. Drift detection identifies when production data distributions diverge from training data. Performance monitoring tracks prediction quality when ground truth becomes available. Alert generation notifies teams of issues requiring attention.
 
-```python
-"""
-Komplett MLSecOps pipeline a Wine Quality modellhez.
-"""
-import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+#### Baseline Establishment
 
-from security.poisoning.data_poisoning_detector import DataPoisoningDetector
-from security.poisoning.model_poisoning_detector import ModelPoisoningDetector
-from security.robustness.adversarial_tester import AdversarialTester
-from security.vertex_ai.model_monitoring import ModelMonitor
+Effective monitoring requires a reference point for comparison. During initial deployment, the system captures baseline statistics: feature distributions, prediction distributions, and performance metrics on a validation set. All subsequent monitoring compares against these baselines.
 
-# 1. Adat betöltés
-df = pd.read_csv("data/wine_quality.csv")
-X = df.drop("quality", axis=1)
-y = df["quality"]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
+Baseline capture should use data representative of expected production traffic. Biased baselines lead to false alerts or missed issues. The system stores baselines alongside model versions, enabling appropriate comparisons when multiple models serve traffic.
 
-# 2. Adat mérgezés ellenőrzés
-print("=" * 50)
-print("1. Data Poisoning Detection")
-print("=" * 50)
+#### Drift Detection
 
-data_detector = DataPoisoningDetector()
-data_report = data_detector.run_full_analysis(X_train, y_train)
+Data drift occurs when production data distributions differ from training data distributions. Models trained on historical data may perform poorly on shifted distributions. Wine production varies seasonally, regional sourcing changes, and measurement equipment calibrates differently over time.
 
-print(f"Risk Level: {data_report['overall_risk_assessment']['risk_level']}")
-print(f"Outliers found: {data_report['outlier_detection']['consensus']['n_outliers']}")
+The monitoring component continuously compares production data against training baselines using statistical tests. Significant drift triggers alerts before prediction quality noticeably degrades. Teams can then investigate causes and retrain if necessary.
 
-if data_report['overall_risk_assessment']['risk_level'] == "HIGH":
-    print("⚠️  WARNING: High risk of data poisoning!")
-    # Implement data cleaning
+Feature-level drift analysis identifies which specific features are shifting. Overall drift might stem from one feature changing dramatically or many features shifting slightly. The distinction matters for remediation: single-feature drift might indicate data quality issues while multi-feature drift suggests genuine population changes.
 
-# 3. Modell tanítás
-model = RandomForestClassifier(n_estimators=100, random_state=42)
-model.fit(X_train, y_train)
+#### Performance Tracking
 
-# 4. Modell mérgezés ellenőrzés
-print("\n" + "=" * 50)
-print("2. Model Poisoning Detection")
-print("=" * 50)
+When ground truth becomes available (actual wine quality ratings after prediction), the system calculates prediction accuracy. Performance tracking reveals whether the model meets quality expectations in production.
 
-model_detector = ModelPoisoningDetector()
-model_report = model_detector.run_full_analysis(model, X_test, y_test)
+Delayed feedback is common in ML systems. A prediction made today might only receive ground truth weeks later. The monitoring system handles this temporal gap, associating feedback with original predictions and computing rolling performance metrics.
 
-print(f"Risk Level: {model_report['overall_risk_assessment']['risk_level']}")
-print(f"Model Fingerprint: {model_report['model_info']['fingerprint'][:16]}...")
+#### Alert Generation
 
-# 5. Robusztusság teszt
-print("\n" + "=" * 50)
-print("3. Robustness Testing")
-print("=" * 50)
+Alerts notify teams of issues requiring attention. Alert configuration balances sensitivity against alert fatigue. Too sensitive triggers constant false alarms that teams learn to ignore. Too insensitive misses genuine problems until they cause significant impact.
 
-tester = AdversarialTester(
-    model=model,
-    feature_names=X.columns.tolist(),
-    task_type="classification"
-)
-robustness_report = tester.run_full_robustness_test(X_test, y_test, n_samples=100)
+The system supports configurable thresholds for different alert types. Critical alerts (potential security issues, severe performance degradation) wake on-call personnel. Warning alerts (moderate drift, minor performance changes) appear in dashboards for regular review.
 
-print(f"Robustness Grade: {robustness_report['overall_robustness']['grade']}")
-print(f"Average Score: {robustness_report['overall_robustness']['average_score']:.3f}")
-
-# 6. Monitoring beállítás
-print("\n" + "=" * 50)
-print("4. Setting up Production Monitoring")
-print("=" * 50)
-
-monitor = ModelMonitor(
-    model=model,
-    feature_names=X.columns.tolist(),
-    task_type="classification"
-)
-baseline = monitor.set_baseline(X_train, y_train)
-
-print(f"Baseline Accuracy: {baseline['prediction_stats']['accuracy']:.3f}")
-print("Monitoring configured and ready!")
-
-# 7. Összefoglaló
-print("\n" + "=" * 50)
-print("SECURITY ASSESSMENT SUMMARY")
-print("=" * 50)
-
-assessment = {
-    "data_poisoning": data_report['overall_risk_assessment']['risk_level'],
-    "model_poisoning": model_report['overall_risk_assessment']['risk_level'],
-    "robustness": robustness_report['overall_robustness']['grade']
-}
-
-for check, result in assessment.items():
-    status = "✅" if "LOW" in result or "A" in result or "B" in result else "⚠️"
-    print(f"  {status} {check}: {result}")
-```
+The implementation resides in `security/vertex_ai/model_monitoring.py`.
 
 ---
 
-## CI/CD Integráció
+### Adversarial Robustness Testing
 
-### GitHub Actions Workflow
+Adversarial robustness testing evaluates whether models resist manipulation attempts. Testing simulates various attack strategies and measures prediction stability. Results guide model hardening and inform deployment decisions.
 
-A projekt tartalmaz egy teljes biztonsági scan workflow-t: `.github/workflows/security-scan.yml`
+#### Attack Simulation Philosophy
 
-**Futtatott ellenőrzések:**
-- 🔍 Dependency vulnerability scanning (Safety, pip-audit)
-- 🐳 Container security scanning (Trivy)
-- 🔐 Secret detection (Gitleaks, TruffleHog)
-- 📝 Static code analysis (Bandit, CodeQL, Semgrep)
-- 🤖 ML-specific security checks (pickle scanning)
+Robustness testing adopts an attacker mindset. Rather than assuming inputs will be legitimate, testing explores what happens when inputs are deliberately crafted to cause problems. This proactive approach identifies vulnerabilities before real attackers exploit them.
 
-### Dependabot konfiguráció
+Different attack strategies probe different weaknesses. Random perturbations test general stability. Gradient-based attacks find optimal manipulations. Feature importance attacks target the most influential inputs. Comprehensive testing combines multiple strategies.
 
-A `.github/dependabot.yml` automatikusan:
-- Heti rendszerességgel ellenőrzi a függőségeket
-- Pull request-eket nyit a frissítésekhez
-- Csoportosítja a hasonló frissítéseket
+#### Perturbation Attacks
 
-### Snyk integráció
+The simplest attack adds random noise to inputs. Small perturbations should not significantly change predictions. If adding 1% noise to feature values flips predictions, the model is too sensitive for production use.
 
-A `.snyk` fájl konfigurálja a Snyk-ot a projekt számára.
+Testing applies perturbations at multiple levels (1%, 5%, 10%, 20%) and measures the fraction of predictions that change. Robust models maintain consistent predictions under small perturbations while appropriately changing predictions for large perturbations that genuinely alter the input.
 
----
+#### Gradient-Based Attacks
 
-## Best Practices
+When attackers can estimate model gradients (through queries or white-box access), they can compute optimal perturbations. The Fast Gradient Sign Method (FGSM) perturbs inputs in the direction that maximally increases prediction error. Projected Gradient Descent (PGD) iteratively refines perturbations for more effective attacks.
 
-### 1. Adat Biztonság
-```python
-# Mindig ellenőrizd az adatokat betöltés után
-detector = DataPoisoningDetector()
-report = detector.run_full_analysis(X, y)
+Testing these attacks reveals worst-case robustness. If gradient-based attacks easily fool the model, sophisticated attackers will succeed. Resistance to gradient attacks indicates fundamental robustness rather than security through obscurity.
 
-if report['overall_risk_assessment']['risk_level'] == "HIGH":
-    # Ne használd az adatot tisztítás nélkül!
-    raise SecurityException("Data poisoning detected")
-```
+#### Feature Importance Attacks
 
-### 2. Modell Integritás
-```python
-# Mentsd el a modell fingerprint-jét
-fingerprint = model_detector.compute_model_fingerprint(model)
-save_fingerprint_to_registry(model_id, fingerprint)
+Targeted attacks focus perturbations on the most important features. If a model relies heavily on alcohol content, manipulating that single feature may flip predictions more effectively than distributing perturbations across all features.
 
-# Ellenőrizd betöltéskor
-loaded_model = load_model("model.pkl")
-if not model_detector.verify_model_integrity(loaded_model, expected_fingerprint):
-    raise SecurityException("Model integrity check failed!")
-```
+Testing identifies the most effective attack vectors. Results guide defensive measures: features requiring small perturbations for attack success might need additional validation or transformation.
 
-### 3. Folyamatos Monitoring
-```python
-# Állíts be alerteket drift esetén
-if monitor.check_drift()["drift_detected"]:
-    send_alert("Model drift detected - retraining may be needed")
-```
+#### Robustness Grading
 
-### 4. Külső Modellek
-```python
-# Mindig validáld a külső modelleket használat előtt
-validator = ExternalModelValidator()
-report = validator.validate_huggingface_model(model_id)
+After running all attack simulations, the system produces an overall robustness grade. The grade considers attack success rates, required perturbation magnitudes, and consistency across attack types. Higher grades indicate models that resist manipulation across diverse attack strategies.
 
-if report["overall_status"] != "PASS":
-    logging.warning(f"Model validation issues: {report['risks']}")
-```
+The implementation resides in `security/robustness/adversarial_tester.py`.
 
 ---
 
-## Tesztelés
+### Dependency Security Scanning
 
-```bash
-# Biztonsági tesztek futtatása
-pytest tests/test_security.py -v
+Software dependencies introduce security risks. A vulnerability in any dependency potentially compromises the entire system. ML projects typically have extensive dependencies spanning data processing, model training, web serving, and infrastructure. Regular scanning identifies vulnerabilities before exploitation.
 
-# Teljes teszt suite
-pytest tests/ -v
+#### Vulnerability Database Scanning
 
-# Coverage report
-pytest tests/test_security.py --cov=security --cov-report=html
-```
+Dedicated tools maintain databases of known vulnerabilities in Python packages. The Safety tool checks against the Python Packaging Advisory Database. The pip-audit tool queries the PyPI advisory database. Running both provides comprehensive coverage as databases differ slightly in content and update timing.
+
+Scanning occurs automatically in CI/CD pipelines, blocking deployment when critical vulnerabilities exist. Regular scheduled scans catch newly disclosed vulnerabilities in already-deployed systems.
+
+#### Typosquatting Detection
+
+Typosquatting attacks publish malicious packages with names similar to popular packages. A developer mistyping "requsts" instead of "requests" might install malware. Detection compares project dependencies against known typosquat patterns and flags suspicious package names for verification.
+
+This protection catches supply chain attacks at the installation stage. Combined with lock files that pin exact package versions, typosquatting detection provides defense in depth against malicious dependencies.
+
+#### License Compliance
+
+Open source licenses carry obligations. Some licenses require attribution. Others require derivative works to use the same license. Some prohibit commercial use. License scanning identifies dependencies with problematic licenses before legal issues arise.
+
+Projects can configure allowed license lists. Scanning flags dependencies with licenses outside the allowed list for manual review. This ensures compliance with organizational policies and avoids legal complications.
+
+#### Container Scanning
+
+Docker containers bundle application code with operating system packages. Vulnerabilities may exist in either layer. Container scanning tools like Trivy examine both the application dependencies and the base image, providing comprehensive vulnerability coverage.
+
+Scanning occurs before pushing images to registries and periodically afterward as new vulnerabilities emerge. Critical vulnerabilities block deployment while lower severity issues create tickets for prioritized remediation.
+
+The implementation resides in `security/dependency_audit/dependency_scanner.py`.
 
 ---
 
-## Referenciák
+### External Model Validation
 
-- [OWASP ML Security Top 10](https://owasp.org/www-project-machine-learning-security-top-10/)
-- [Vertex AI Explainable AI](https://cloud.google.com/vertex-ai/docs/explainable-ai/overview)
-- [Adversarial Robustness Toolbox](https://github.com/Trusted-AI/adversarial-robustness-toolbox)
-- [SHAP Documentation](https://shap.readthedocs.io/)
-- [Hugging Face Security](https://huggingface.co/docs/hub/security)
+Third-party models from public repositories accelerate development but introduce security risks. Models might contain backdoors, leaked private information, or simply fail to perform as advertised. Validation verifies that external models meet security and quality standards before integration.
+
+#### Provenance Verification
+
+Legitimate models come from identifiable, reputable sources. Verification checks model metadata against known organizations, verifies digital signatures where available, and examines community trust indicators like download counts and user reviews.
+
+The Hugging Face platform provides structured metadata including author information, model cards describing training data and intended use, and community feedback. Validation examines all available provenance information and flags models lacking adequate documentation.
+
+#### Malicious Code Detection
+
+Pickle files, the common format for serialized Python models, can contain arbitrary code that executes during loading. A malicious model might install malware, exfiltrate data, or modify other files when loaded.
+
+Scanning examines pickle files for suspicious patterns: import statements for dangerous modules, code execution primitives, network operations, or file system access. While detection cannot catch all possible attacks, it identifies common malicious patterns.
+
+#### Model Card Verification
+
+Responsible model publishers provide model cards documenting training data, intended use cases, limitations, and evaluation results. Missing or inadequate documentation suggests inadequate development practices that may extend to security.
+
+Validation checks for required model card sections and flags models lacking essential documentation. Teams can then decide whether the model merits additional scrutiny or should be rejected entirely.
+
+#### Integrity Verification
+
+After initial validation, the system computes and stores model fingerprints. Subsequent loads verify fingerprints to ensure the model was not modified after validation. This catches both accidental corruption and deliberate tampering.
+
+The implementation resides in `security/model_audit/external_model_validator.py`.
 
 ---
 
-## Támogatás
+## CI/CD Security Integration
 
-Kérdések vagy problémák esetén nyiss egy GitHub issue-t a projektben.
+Security scanning integrates into the development workflow through automated CI/CD pipeline stages. Every code change triggers security checks. Deployments proceed only when all checks pass. This shift-left approach catches issues early when remediation is simplest.
+
+### Pipeline Security Stages
+
+The GitHub Actions workflow includes dedicated security stages:
+
+**Dependency Scanning**: Runs Safety and pip-audit against requirements files. Fails the build if critical vulnerabilities exist. Generates reports for lower-severity findings.
+
+**Container Scanning**: After Docker image build, Trivy scans the image for OS and application vulnerabilities. Results upload to GitHub Security for centralized tracking.
+
+**Static Analysis**: Bandit analyzes Python code for common security issues like hardcoded credentials, SQL injection patterns, or insecure cryptographic usage.
+
+**Secret Detection**: Scans commit history and staged changes for accidentally committed secrets like API keys, passwords, or private keys.
+
+**ML Security Scanning**: Custom checks for ML-specific issues including pickle file scanning and model validation.
+
+### Automated Remediation
+
+Where possible, the pipeline supports automated remediation. Dependabot creates pull requests updating vulnerable dependencies. Automated fixes apply for issues with clear solutions. Human review remains required for complex security decisions.
+
+### Security Dashboards
+
+GitHub Security provides a centralized view of vulnerability status across repositories. Teams can track remediation progress, prioritize issues by severity, and demonstrate security posture to auditors.
+
+The workflow definitions reside in `.github/workflows/security-scan.yml` with supporting configuration in `.github/dependabot.yml` and `.snyk`.
+
+---
+
+## Implementation Guide
+
+### Getting Started
+
+Security scanning activates automatically through CI/CD integration. Local development can also run security checks before pushing changes.
+
+The base requirements file includes core security dependencies. The separate requirements-security.txt file adds optional tools for comprehensive local testing. Teams can install either or both depending on their needs.
+
+### Running Security Checks Locally
+
+Before pushing changes, developers can run the same security checks that CI/CD will perform. This catches issues earlier and avoids failed builds.
+
+Data poisoning analysis runs during model training. The pipeline automatically checks training data before proceeding. Teams can configure sensitivity thresholds based on their risk tolerance.
+
+Model validation occurs when loading external models. The system blocks loading of models that fail validation unless explicitly overridden for investigation purposes.
+
+### Interpreting Results
+
+Security scan results require human interpretation. Not every flagged item represents a genuine threat. Context matters.
+
+A vulnerability in a development-only dependency poses less risk than one in production code. A model weight anomaly might indicate attack or might reflect legitimate training dynamics. Security teams should review flagged items and make informed decisions rather than blindly acting on every alert.
+
+### Customization
+
+Security thresholds and policies vary by organization. The module supports configuration of detection sensitivities, allowed license lists, required model card sections, and alert escalation rules. Teams should tune these settings based on their specific requirements and risk tolerance.
+
+---
+
+## References
+
+### Standards and Guidelines
+
+The OWASP Machine Learning Security Top 10 provides the primary framework for ML security concerns. The NIST AI Risk Management Framework offers broader guidance on AI system governance. Both documents inform the module's design priorities.
+
+### Further Reading
+
+The Adversarial Robustness Toolbox documentation covers attack and defense techniques in depth. SHAP and LIME papers explain the theoretical foundations of explanation methods. Trivy documentation details container scanning capabilities.
+
+Security is an evolving field. New attacks emerge regularly. Teams should monitor security advisories for their dependencies and update scanning tools as improvements become available.
+
+---
+
+## Version Information
+
+- Version: 1.0.0
+- Last Updated: December 2025
+- Compatibility: Python 3.8+
